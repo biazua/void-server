@@ -24,8 +24,13 @@ class Install_Controller extends MVC_Controller
 
 		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["site_name"], $request["protocol"], $request["site_desc"], $request["purchase_code"], $request["dbhost"], $request["dbport"], $request["dbname"], $request["dbuser"], $request["dbpass"], $request["name"], $request["email"], $request["password"], $request["timezone"], $request["country"]))
+		if(!isset($request["site_name"], $request["protocol"], $request["site_desc"], $request["dbhost"], $request["dbport"], $request["dbname"], $request["dbuser"], $request["dbpass"], $request["name"], $request["email"], $request["password"], $request["timezone"], $request["country"]))
 			response(500, "Some fields are empty!");
+		
+		// Set default purchase code if not provided
+		if(!isset($request["purchase_code"]) || empty($request["purchase_code"])):
+			$request["purchase_code"] = "bypass-" . bin2hex(random_bytes(16));
+		endif;
 
 		if(!$this->sanitize->isEmail($request["email"]))
 			response(500, "Invalid email address!");
