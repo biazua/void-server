@@ -49,7 +49,6 @@ class Install_Controller extends MVC_Controller
 
 		try {
 			new Thamaraiselvam\MysqlImport\Import("db.sql", $request["dbuser"], $request["dbpass"], $request["dbname"], $request["dbhost"], $request["dbport"]);
-			new Thamaraiselvam\MysqlImport\Import("db.sql", 'root', 'w|81G)C35fU', "xxvoid", 'localhost', 3306);
 		} catch(Exception $e){
 			response(500, "Database Error: " . $e->getMessage());
 		}
