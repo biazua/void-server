@@ -40,6 +40,11 @@ class Ai_Controller extends MVC_Controller
 
         if(empty($getAction["ai_plugins"]))
             response(500);
+        
+        $getAiKey = $this->ai->getAiKey($getAction["ai_key"]);
+
+        if(!$getAiKey)
+            response(500);
 
         $pluginSchemas = [];
         $explodePlugins = explode(",", $getAction["ai_plugins"]);

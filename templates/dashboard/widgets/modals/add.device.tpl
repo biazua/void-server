@@ -15,7 +15,7 @@
         <h5 class="text-uppercase">{__("form_adddevice_two")}</h5>
         <p class="pl-3 text-justify">{__("form_adddevice_three")}</p>
         <p class="text-center">
-            <a href="#" class="btn btn-primary lift" system-download-gateway>
+            <a href="{site_url("uploads/builder/gateway.apk?_={time()}", true)}" class="btn btn-primary lift" target="_blank">
                 <i class="la la-android la-lg text-success"></i> {__("btn_download")}<br>
             </a>
 
@@ -26,7 +26,7 @@
             </div>
 
             <div id="system-qrcode-download">
-                <script>system.qrcode("{$data.apk_url}", 150, 150, "system-qrcode-download");</script>
+                <script>system.qrcode("{site_url("uploads/builder/gateway.apk?_={time()}", true)}", 150, 150, "system-qrcode-download");</script>
             </div>
         </p>
 

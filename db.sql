@@ -404,7 +404,7 @@ CREATE TABLE `settings` (
 INSERT INTO `settings` (`id`, `name`, `value`) VALUES
 (1,	'site_name',	'Zender'),
 (2,	'site_desc',	'This is a test'),
-(3,	'purchase_code',	'bypass-auto'),
+(3,	'purchase_code',	'123456'),
 (4,	'default_lang',	'1'),
 (5,	'registrations',	'1'),
 (6,	'mail_function',	'1'),

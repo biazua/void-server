@@ -143,36 +143,6 @@ window.system = {
                         }, 3000);
                     });
 
-                    echo.on("online", (payload) => {
-                        $.get(site_url + "/requests/echo/online", {
-                            did: payload
-                        }, function (http) {
-                            var response = (typeof http === "string") ? JSON.parse(http) : JSON.parse(JSON.stringify(http));
-
-                            if (response.status == 200) {
-                                system.tables(true);
-
-                                $(".device-status-" + response.data.device).text(lang_js_userstatus_online);
-                                $(".device-status-" + response.data.device).attr("class", "badge badge-success device-status-" + response.data.device);
-                            }
-                        });
-                    });
-
-                    echo.on("offline", (payload) => {
-                        $.get(site_url + "/requests/echo/offline", {
-                            id: payload
-                        }, function (http) {
-                            var response = (typeof http === "string") ? JSON.parse(http) : JSON.parse(JSON.stringify(http));
-
-                            if (response.status == 200) {
-                                system.tables(true);
-
-                                $(".device-status-" + response.data.device).text(lang_js_userstatus_offline);
-                                $(".device-status-" + response.data.device).attr("class", "badge badge-danger device-status-" + response.data.device);
-                            }
-                        });
-                    });
-
                     echo.on("broadcast", (payload) => {
                         if (payload.recipients.includes(response.data.id.toString())) {
                             if (alertsound) {
@@ -211,9 +181,15 @@ window.system = {
                                 playAlert("submarine");
                             }
 
-                            if (payload.status < 2) {
+                            if (payload.status == 1) {
                                 alert.success(payload.content, false, true);
-                            } else {
+                            } 
+
+                            if (payload.status == 2) {
+                                alert.warning(payload.content, false, true);
+                            }   
+
+                            if (payload.status == 3) {
                                 alert.danger(payload.content, false, true);
                             }
                         }
@@ -2255,30 +2231,6 @@ window.system = {
                 }
             });
         }
-
-        if ($("[system-device-list]").length) {
-            $("[system-device-list] option").each((index, data) => {
-                if ((data["attributes"]["online-id"] !== undefined) && data["attributes"]["online-id"].value.length > 0) {
-                    echo.emit("status", data["attributes"]["online-id"].value, function (status) {
-                        if (status) {
-                            $(".device-status-" + data["attributes"]["device-id"].value).text(lang_js_userstatus_online);
-                            $(".device-status-" + data["attributes"]["device-id"].value).attr("class", "badge badge-success device-status-" + data["attributes"]["device-id"].value);
-                        } else {
-                            $.get(site_url + "/requests/echo/offline", {
-                                id: data["attributes"]["online-id"].value
-                            }, function (http) {
-                                var response = (typeof http === "string") ? JSON.parse(http) : JSON.parse(JSON.stringify(http));
-
-                                if (response.status == 200) {
-                                    $(".device-status-" + response.data.device).text(lang_js_userstatus_offline);
-                                    $(".device-status-" + response.data.device).attr("class", "badge badge-danger device-status-" + response.data.device);
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
     },
 
     visitors: () => {
@@ -3127,6 +3079,8 @@ window.system = {
                                         $("[system-transcription-openai]").show();
                                         $("[system-models-geminiai]").hide();
                                         $("[system-models-claudeai]").hide();
+                                        $("[system-models-deepseekai]").hide();
+                                        $("[system-vision-ai]").show();
                                     }
 
                                     if (aiProvider == "geminiai") {
@@ -3134,6 +3088,8 @@ window.system = {
                                         $("[system-transcription-openai]").hide();
                                         $("[system-models-geminiai]").show();
                                         $("[system-models-claudeai]").hide();
+                                        $("[system-models-deepseekai]").hide();
+                                        $("[system-vision-ai]").show();
                                     }
 
                                     if (aiProvider == "claudeai") {
@@ -3141,6 +3097,17 @@ window.system = {
                                         $("[system-transcription-openai]").hide();
                                         $("[system-models-geminiai]").hide();
                                         $("[system-models-claudeai]").show();
+                                        $("[system-models-deepseekai]").hide();
+                                        $("[system-vision-ai]").show();
+                                    }
+
+                                    if (aiProvider == "deepseekai") {
+                                        $("[system-models-openai]").hide();
+                                        $("[system-transcription-openai]").hide();
+                                        $("[system-models-geminiai]").hide();
+                                        $("[system-models-claudeai]").hide();
+                                        $("[system-models-deepseekai]").show();
+                                        $("[system-vision-ai]").hide();
                                     }
 
                                     $("[system-ai-provider]").change(() => {
@@ -3152,6 +3119,8 @@ window.system = {
                                                 $("[system-transcription-openai]").show();
                                                 $("[system-models-geminiai]").hide();
                                                 $("[system-models-claudeai]").hide();
+                                                $("[system-models-deepseekai]").hide();
+                                                $("[system-vision-ai]").show();
                                             }
 
                                             if (aiProvider == "geminiai") {
@@ -3159,6 +3128,8 @@ window.system = {
                                                 $("[system-transcription-openai]").hide();
                                                 $("[system-models-geminiai]").show();
                                                 $("[system-models-claudeai]").hide();
+                                                $("[system-models-deepseekai]").hide();
+                                                $("[system-vision-ai]").show();
                                             }
 
                                             if (aiProvider == "claudeai") {
@@ -3166,6 +3137,17 @@ window.system = {
                                                 $("[system-transcription-openai]").hide();
                                                 $("[system-models-geminiai]").hide();
                                                 $("[system-models-claudeai]").show();
+                                                $("[system-models-deepseekai]").hide();
+                                                $("[system-vision-ai]").show();
+                                            }
+
+                                            if (aiProvider == "deepseekai") {
+                                                $("[system-models-openai]").hide();
+                                                $("[system-transcription-openai]").hide();
+                                                $("[system-models-geminiai]").hide();
+                                                $("[system-models-claudeai]").hide();
+                                                $("[system-models-deepseekai]").show();
+                                                $("[system-vision-ai]").hide();
                                             }
                                         } catch {
                                             // Ignore

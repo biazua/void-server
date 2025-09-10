@@ -24,13 +24,8 @@ class Install_Controller extends MVC_Controller
 
 		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["site_name"], $request["protocol"], $request["site_desc"], $request["dbhost"], $request["dbport"], $request["dbname"], $request["dbuser"], $request["dbpass"], $request["name"], $request["email"], $request["password"], $request["timezone"], $request["country"]))
+		if(!isset($request["site_name"], $request["protocol"], $request["site_desc"], $request["purchase_code"], $request["dbhost"], $request["dbport"], $request["dbname"], $request["dbuser"], $request["dbpass"], $request["name"], $request["email"], $request["password"], $request["timezone"], $request["country"]))
 			response(500, "Some fields are empty!");
-		
-		// Set default purchase code if not provided
-		if(!isset($request["purchase_code"]) || empty($request["purchase_code"])):
-			$request["purchase_code"] = "bypass-" . bin2hex(random_bytes(16));
-		endif;
 
 		if(!$this->sanitize->isEmail($request["email"]))
 			response(500, "Invalid email address!");
@@ -50,7 +45,7 @@ class Install_Controller extends MVC_Controller
 		try {
 			new Thamaraiselvam\MysqlImport\Import("db.sql", $request["dbuser"], $request["dbpass"], $request["dbname"], $request["dbhost"], $request["dbport"]);
 		} catch(Exception $e){
-			response(500, "Database Error: " . $e->getMessage());
+			response(500, "Invalid Database Credentials!");
 		}
 
 		try {
@@ -68,7 +63,7 @@ ENV;
 
 			$this->file->put("system/configurations/cc_env.inc", $env);
 		} catch(Exception $e){
-			response(500, "Configuration Error: " . $e->getMessage());
+			response(500, "Invalid Database Credentials!");
 		}
 
 		$filtered = [
@@ -110,14 +105,13 @@ UPDATE settings SET value = "{$request["purchase_code"]}" WHERE name = "purchase
 UPDATE settings SET value = "{$request["protocol"]}" WHERE name = "protocol";
 SQL;
 
-			// Use existing populate.sql file or create it
-			if(file_exists("populate.sql") || $this->file->put("populate.sql", $query)):
+			if($this->file->put("populate.sql", $query)):
 				new Thamaraiselvam\MysqlImport\Import("populate.sql", $request["dbuser"], $request["dbpass"], $request["dbname"], $request["dbhost"], $request["dbport"]);
 			else:
-				response(500, "Unable to create populate.sql file!");
+				response(500, "Unable to populate the database!");
 			endif;
 		} catch(Exception $e){
-			response(500, "Population Error: " . $e->getMessage());
+			response(500, "Something went wrong!");
 		}
 
 		rmrf("templates/_install");

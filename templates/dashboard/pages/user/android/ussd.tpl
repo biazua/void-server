@@ -20,11 +20,8 @@
                         <button class="btn btn-danger lift mb-2 mb-lg-0" title="{__("and_droid_ussd_6")}" system-trash="android.ussd">
                             <i class="la la-stream la-lg"></i>
                         </button>
-                        <button class="btn btn-warning lift mb-2 mb-lg-0" title="{__("and_droid_ussd_10")}" system-clear-pending="ussd">
-                            <i class="la la-exclamation-triangle la-lg"></i>
-                        </button>
                         <button class="btn btn-primary lift mb-2 mb-lg-0" title="{__("and_droid_ussd_14")}" system-toggle="add.ussd">
-                            <i class="la la-telegram la-lg"></i> {__("and_droid_ussd_16")}
+                            <i class="la la-satellite-dish la-lg"></i> {__("and_droid_ussd_16")}
                         </button>
                     </div>
                 </div>

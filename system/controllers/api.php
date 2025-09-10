@@ -350,22 +350,10 @@ class Api_Controller extends MVC_Controller
                         endif;
                     endif;
 
-                    if($request["mode"] == "devices"):
-                        $this->fcm->send(md5($api["uid"] . $request["device"]), [
-                            "type" => "sms",
-                            "global" => 0,
-                            "currency" => "None",
-                            "rate" => (float) 0
+                    if($request["mode"] == "devices" || !$this->sanitize->isInt($request["gateway"])):
+                        $this->fcm->sendWithToken($device["fcm_token"], [
+                            "action" => "message_request"
                         ]);
-                    else:
-                        if(!$this->sanitize->isInt($request["gateway"])):
-                            $this->fcm->send(md5($device["uid"] . $request["gateway"]), [
-                                "type" => "sms",
-                                "global" => 1,
-                                "currency" => $currency,
-                                "rate" => (float) $device["rate"]
-                            ]);
-                        endif;
                     endif;
                 else:
                     if(!in_array("whatsapp", explode(",", $subscription["services"]))):
@@ -563,11 +551,6 @@ class Api_Controller extends MVC_Controller
                         response(404, "Device doesn't exist!");
 
                     $device = $this->system->getDevice($api["uid"], $request["device"], "did");
-
-                    if($device["limit_status"] < 2 && $this->system->checkSmsLimit($api["uid"], $request["device"], $device["limit_interval"], $device["limit_number"])):
-                        $intervalType = $device["limit_interval"] < 2 ? "daily" : "monthly";
-                        response(403, "The {$intervalType} allowed messages has been reached for this device, please try again later!");
-                    endif;
                 else:
                     if($request["mode"] != "credits")
                         response(400, "Invalid Parameters!");
@@ -596,11 +579,6 @@ class Api_Controller extends MVC_Controller
                         if($device):
                             if($device["uid"] == $api["uid"]):
                                 response(403, "You cannot send messages with credits using your own devices!");
-                            endif;
-
-                            if($device["limit_status"] < 2 && $this->system->checkSmsLimit($api["uid"], $request["gateway"], $device["limit_interval"], $device["limit_number"])):
-                                $intervalType = $device["limit_interval"] < 2 ? "daily" : "monthly";
-                                response(403, "The {$intervalType} allowed messages has been reached for this device, please try again later!");
                             endif;
 
                             if($device["global_device"] > 1):
@@ -780,22 +758,10 @@ class Api_Controller extends MVC_Controller
                     endif;
                 endif;
 
-                if($request["mode"] == "devices"):
-                    $this->fcm->send(md5($api["uid"] . $request["device"]), [
-                        "type" => "sms",
-                        "global" => 0,
-                        "currency" => "None",
-                        "rate" => (float) 0
+                if($request["mode"] == "devices" || !$this->sanitize->isInt($request["gateway"])):
+                    $this->fcm->sendWithToken($device["fcm_token"], [
+                        "action" => "message_request"
                     ]);
-                else:
-                    if(!$this->sanitize->isInt($request["gateway"])):
-                        $this->fcm->send(md5($device["uid"] . $request["gateway"]), [
-                            "type" => "sms",
-                            "global" => 1,
-                            "currency" => $currency,
-                            "rate" => (float) $device["rate"]
-                        ]);
-                    endif;
                 endif;
 
                 response(200, "Message has been queued for sending!", [
@@ -1042,10 +1008,6 @@ class Api_Controller extends MVC_Controller
                         if(!limitation($subscription["send_limit"], $this->system->countQuota($api["uid"], "sent"))):
                             $rejectLimit = false;
 
-                            if($device["limit_status"] < 2 && $this->system->checkSmsLimit($api["uid"], $request["device"], $device["limit_interval"], $device["limit_number"])):
-                                $rejectLimit = true;
-                            endif;
-
                             if(!$rejectLimit):
                                 $this->system->create("sent", [
                                     "cid" => $smsCampaign,
@@ -1160,10 +1122,6 @@ class Api_Controller extends MVC_Controller
 
                                 $rejectLimit = false;
 
-                                if($device["limit_status"] < 2 && $this->system->checkSmsLimit($api["uid"], $request["gateway"], $device["limit_interval"], $device["limit_number"])):
-                                    $rejectLimit = true;
-                                endif;
-
                                 if(!$rejectLimit):
                                     $this->system->create("sent", [
                                         "cid" => $smsCampaign,
@@ -1192,10 +1150,6 @@ class Api_Controller extends MVC_Controller
                                         "api" => 1,
                                         "create_date" => date("Y-m-d H:i:s", time())
                                     ]);
-
-                                    if($device["limit_status"] < 2):
-                                        $sendCounter++;
-                                    endif;
                                 endif;
                             endif;
                         endif;
@@ -1203,17 +1157,9 @@ class Api_Controller extends MVC_Controller
                 endforeach;
 
                 if($request["mode"] == "devices" || !$this->sanitize->isInt($request["gateway"])):
-                    if($device["limit_status"] < 2 && $this->system->checkSmsLimit($api["uid"], $request["mode"] == "devices" ? $request["device"] : $request["gateway"], $device["limit_interval"], $device["limit_number"])):
-                        if($sendCounter < 1):
-                            $this->system->delete($api["uid"], $smsCampaign, "campaigns");
-                            $intervalType = $device["limit_interval"] < 2 ? "daily" : "monthly";
-                            response(403, "The {$intervalType} allowed messages has been reached for this device, please try again later!");
-                        endif;
-                    else:
-                        if($sendCounter < 1):
-                            $this->system->delete($api["uid"], $smsCampaign, "campaigns");
-                            response(403, "You have reached the maximum sent messages for your current package!");
-                        endif;
+                    if($sendCounter < 1):
+                        $this->system->delete($api["uid"], $smsCampaign, "campaigns");
+                        response(403, "You have reached the maximum sent messages for your current package!");
                     endif;
 
                     if($sendCounter < count($contactBook)):
@@ -1223,22 +1169,10 @@ class Api_Controller extends MVC_Controller
                     endif;
                 endif;
 
-                if($request["mode"] == "devices"):
-                    $this->fcm->send(md5($api["uid"] . $request["device"]), [
-                        "type" => "sms",
-                        "global" => 0,
-                        "currency" => "None",
-                        "rate" => (float) 0
+                if($request["mode"] == "devices" || !$this->sanitize->isInt($request["gateway"])):
+                    $this->fcm->sendWithToken($device["fcm_token"], [
+                        "action" => "message_request"
                     ]);
-                else:
-                    if(!$this->sanitize->isInt($request["gateway"])):
-                        $this->fcm->send(md5($device["uid"] . $request["gateway"]), [
-                            "type" => "sms",
-                            "global" => 1,
-                            "currency" => $currency,
-                            "rate" => (float) $device["rate"]
-                        ]);
-                    endif;
                 endif;
 
                 response(200, "Bulk messages has been queued for sending!");
@@ -1473,6 +1407,10 @@ class Api_Controller extends MVC_Controller
                                     $docMimetype = "application/pdf";
 
                                     break;
+                                case "xml":
+                                    $docMimetype = "application/xml";
+                                    
+                                    break;
                                 case "xls":
                                     $docMimetype = "application/excel";
                                     
@@ -1519,6 +1457,10 @@ class Api_Controller extends MVC_Controller
                                         case "pdf":
                                             $docMimetype = "application/pdf";
 
+                                            break;
+                                        case "xml":
+                                            $docMimetype = "application/xml";
+                                            
                                             break;
                                         case "xls":
                                             $docMimetype = "application/excel";
@@ -1914,6 +1856,10 @@ class Api_Controller extends MVC_Controller
                                     $docMimetype = "application/pdf";
 
                                     break;
+                                case "xml":
+                                    $docMimetype = "application/xml";
+                                    
+                                    break;
                                 case "xls":
                                     $docMimetype = "application/excel";
                                     
@@ -1960,6 +1906,10 @@ class Api_Controller extends MVC_Controller
                                         case "pdf":
                                             $docMimetype = "application/pdf";
 
+                                            break;
+                                        case "xml":
+                                            $docMimetype = "application/xml";
+                                            
                                             break;
                                         case "xls":
                                             $docMimetype = "application/excel";
@@ -2153,9 +2103,7 @@ class Api_Controller extends MVC_Controller
                 ];
 
                 if($this->system->create("ussd", $filtered)):
-                    $this->fcm->send(md5($api["uid"] . $request["device"]), [
-                        "type" => "ussd"
-                    ]);
+                    // TODO: Send USSD request fcm notification
 
                     response(200, "USSD request has been queued!");
                 else:
@@ -2218,10 +2166,12 @@ class Api_Controller extends MVC_Controller
                 if($this->system->update($request["campaign"], $api["uid"], "campaigns", [
                     "status" => 1
                 ])):
-                    $this->fcm->send(md5($campaign["device_uid"] . $campaign["did"]), [
-                        "type" => "start_sms",
-                        "cid" => (int) $campaign["id"],
-                        "name" => $campaign["name"]
+                    $device = $this->system->getDevice($api["uid"], $campaign["device_uid"], "did");
+                    
+                    $this->fcm->sendWithToken($device["fcm_token"], [
+                        "action" => "campaign_request",
+                        "campaign_id" => (int) $campaign["id"],
+                        "campaign_status" => "start"
                     ]);
                 endif;
 
@@ -2249,10 +2199,12 @@ class Api_Controller extends MVC_Controller
                 if($this->system->update($request["campaign"], $api["uid"], "campaigns", [
                     "status" => 2
                 ])):
-                    $this->fcm->send(md5($campaign["device_uid"] . $campaign["did"]), [
-                        "type" => "stop_sms",
-                        "cid" => (int) $campaign["id"],
-                        "name" => $campaign["name"]
+                    $device = $this->system->getDevice($api["uid"], $campaign["device_uid"], "did");
+                        
+                    $this->fcm->sendWithToken($device["fcm_token"], [
+                        "action" => "campaign_request",
+                        "campaign_id" => (int) $campaign["id"],
+                        "campaign_status" => "stop"
                     ]);
                 endif;
 
@@ -2319,54 +2271,6 @@ class Api_Controller extends MVC_Controller
                 endif;
 
                 response(200, "WhatsApp campaign has been paused!");
-
-                break;
-            default:
-                response(500, "Invalid API Endpoint!");
-        endswitch;
-    }
-
-    public function clear()
-    {
-        $this->header->allow();
-
-        $this->cache->container("system.settings");
-
-        if($this->cache->empty()):
-            $this->cache->setArray($this->system->getSettings());
-        endif;
-
-        set_system($this->cache->getAll());
-
-        $request = $this->sanitize->array($_REQUEST);
-        $service = $this->sanitize->string($this->url->segment(4));
-
-        if(!isset($request["secret"]))
-            response(400, "Invalid Parameters!");
-
-        if($this->api->checkApikey($request["secret"]) < 1)
-            response(401, "Invalid API secret supplied!");
-
-        $api = $this->api->getApikey($request["secret"]);
-
-        $permissions = explode(",", $api["permissions"]);
-
-        if(!is_array($permissions))
-            response(403, "Insufficient Permissions!");
-
-        switch($service):
-            case "ussd":
-                if(!in_array("clear_ussd_pending", explode(",", $api["permissions"])))
-                    response(403, "This API key doesn't have permission to use this endpoint!");
-
-                if($this->system->clearUssd($api["uid"])):
-                    $this->fcm->send($this->hash->encode($api["uid"], system_token), [
-                        "type" => "clear_ussd",
-                        "uid" => (int) $api["uid"]
-                    ]);
-                endif;
-
-                response(200, "Pending USSD requests has been cleared!");
 
                 break;
             default:
@@ -2513,6 +2417,189 @@ class Api_Controller extends MVC_Controller
                 response(403, "OTP is invalid or expired!");
 
                 break;
+            case "sms.message":
+                if(!isset($request["id"], $request["type"]))
+                    response(400, "Invalid Parameters!");
+
+                if(!$this->sanitize->isInt($request["id"]))
+                    response(400, "Invalid Parameters!");
+
+                if(!in_array($request["type"], ["sent", "received"]))
+                    response(400, "Invalid Parameters!");
+
+                if(!in_array("get_message", explode(",", $api["permissions"])))
+                        response(403, "This API key doesn't have permission to use this endpoint!");
+
+                if($request["type"] == "sent"):
+                    if(!in_array("get_sms_sent", explode(",", $api["permissions"])))
+                        response(403, "This API key doesn't have permission to use this endpoint!");
+
+                    if($this->api->checkSmsSent($request["id"], $api["uid"]) < 1)
+                        response(404, "Message doesn't exist!");
+                    
+                    $smsSent = $this->api->getSmsSent($request["id"], $api["uid"]);
+                    
+                    if($smsSent):
+                        $sentFilter = [
+                            "id" => (int) $smsSent["id"],
+                            "mode" => $smsSent["mode"] < 2 ? "devices" : "credits",
+                            "sender" => $smsSent["mode"] < 2 ? $smsSent["did"] : ($smsSent["gateway"] > 0 ? $smsSent["gateway_name"] : $smsSent["did"]),
+                            "sender_type" => $smsSent["mode"] < 2 ? "device" : ($smsSent["gateway"] > 0 ? "gateway" : "partner_device"),
+                            "sim" => (int) ($smsSent["mode"] < 2 ? $smsSent["sim"] : ($smsSent["gateway"] > 0 ? 0 : $smsSent["sim"])),
+                            "priority" => $smsSent["mode"] < 2 ? ($smsSent["priority"] < 2 ? false : true) : ($smsSent["gateway"] > 0 ? false : ($smsSent["priority"] < 2 ? false : true)),
+                            "api" => $smsSent["api"] < 2 ? true : false,
+                            "status" => smsStatusParser($smsSent["status"]),
+                            "status_code" => $smsSent["status_code"],
+                            "recipient" => $smsSent["phone"],
+                            "message" => $smsSent["message"],
+                            "created" => strtotime($smsSent["create_date"])
+                        ];
+
+                        response(200, "Message was found!", $sentFilter);
+                    else:
+                        response(500, "Something went wrong!");
+                    endif;
+                else:
+                    if(!in_array("get_sms_received", explode(",", $api["permissions"])))
+                        response(403, "This API key doesn't have permission to use this endpoint!");
+
+                    if($this->api->checkSmsReceived($request["id"], $api["uid"]) < 1)
+                        response(404, "Message doesn't exist!");
+                    
+                    $receivedSent = $this->api->getSmsReceived($request["id"], $api["uid"]);
+                    
+                    if($receivedSent):
+                        $receivedFilter = [
+                            "id" => (int) $receivedSent["id"],
+                            "device" => $receivedSent["did"],
+                            "sender" => $receivedSent["phone"],
+                            "message" => $receivedSent["message"],
+                            "created" => strtotime($receivedSent["receive_date"])
+                        ];
+
+                        response(200, "Message was found!", $receivedFilter);
+                    else:
+                        response(500, "Something went wrong!");
+                    endif;
+                endif;
+
+                break;
+            case "wa.message":
+                if(!isset($request["id"], $request["type"]))
+                    response(400, "Invalid Parameters!");
+
+                if(!$this->sanitize->isInt($request["id"]))
+                    response(400, "Invalid Parameters!");
+
+                if(!in_array($request["type"], ["sent", "received"]))
+                    response(400, "Invalid Parameters!");
+
+                if($request["type"] == "sent"):
+                    if(!in_array("get_wa_sent", explode(",", $api["permissions"])))
+                        response(403, "This API key doesn't have permission to use this endpoint!");
+
+                    if($this->api->checkWaSent($request["id"], $api["uid"]) < 1)
+                        response(404, "Message doesn't exist!");
+                    
+                    $waSent = $this->api->getWaSent($request["id"], $api["uid"]);
+                    
+                    if($waSent):
+                        $account = explode(":", $waSent["wid"]);
+
+                        try {
+                            $msgDecode = json_decode($waSent["message"], true, JSON_THROW_ON_ERROR);
+                            $waMessage = isset($msgDecode["text"]) ? $msgDecode["text"] : $msgDecode["caption"];
+                        } catch(Exception $e){
+                            $waMessage = $waSent["message"];
+                        }
+
+                        try {
+                            $msgDecode = json_decode($waSent["message"], true, JSON_THROW_ON_ERROR);
+
+                            if(isset($msgDecode["image"])):
+                                $downloadLink = $msgDecode["image"]["url"];
+                            elseif(isset($msgDecode["video"])):
+                                $downloadLink = $msgDecode["video"]["url"];
+                            elseif(isset($msgDecode["document"])):
+                                $downloadLink = $msgDecode["document"]["url"];
+                            else:
+                                $downloadLink = false;
+                            endif;
+                        } catch(Exception $e){
+                            $downloadLink = false;
+                        }
+
+                        switch($waSent["status"]):
+                            case 1:
+                                $chatStatus = "pending";
+                                break;
+                            case 2:
+                                $chatStatus = "queued";
+                                break;
+                            case 3:
+                                $chatStatus = "sent";
+                                break;
+                            case 4:
+                                $chatStatus = "failed";
+                                break;
+                            default:
+                                $chatStatus = "unknown";
+                        endswitch;
+
+                        $sentFilter = [
+                            "id" => (int) $waSent["id"],
+                            "account" => "+{$account[0]}",
+                            "status" => $chatStatus,
+                            "api" => $waSent["api"] < 2 ? true : false,
+                            "recipient" => $waSent["phone"],
+                            "message" => $waMessage,
+                            "attachment" => $downloadLink,
+                            "created" => strtotime($waSent["create_date"])
+                        ];
+
+                        response(200, "Message was found!", $sentFilter);
+                    else:
+                        response(500, "Something went wrong!");
+                    endif;
+                else:
+                    if(!in_array("get_wa_received", explode(",", $api["permissions"])))
+                        response(403, "This API key doesn't have permission to use this endpoint!");
+
+                    if($this->api->checkWaReceived($request["id"], $api["uid"]) < 1)
+                        response(404, "Message doesn't exist!");
+                    
+                    $waReceived = $this->api->getWaReceived($request["id"], $api["uid"]);
+                    
+                    if($waReceived):
+                        $attachmentLink = false;
+
+                        try {
+                            $fileName = checkFile($waReceived["id"], "uploads/whatsapp/received/{$waReceived["unique"]}");
+
+                            if($fileName):
+                                $attachmentLink = site_url("uploads/whatsapp/received/{$waReceived["unique"]}/{$fileName}", true);
+                            endif;
+                        } catch(Exception $e){
+                            $attachmentLink = false;
+                        }
+
+                        $account = explode(":", $waReceived["wid"]);
+                        $receivedFilter = [
+                            "id" => (int) $waReceived["id"],
+                            "account" => "+{$account[0]}",
+                            "recipient" => $waReceived["phone"],
+                            "message" => $waReceived["message"],
+                            "attachment" => $attachmentLink,
+                            "created" => strtotime($waReceived["receive_date"])
+                        ];
+
+                        response(200, "Message was found!", $receivedFilter);
+                    else:
+                        response(500, "Something went wrong!");
+                    endif;
+                endif;
+
+                break;
             case "credits":
                 if(!in_array("get_credits", explode(",", $api["permissions"])))
                     response(403, "This API key doesn't have permission to use this endpoint!");
@@ -2640,7 +2727,7 @@ class Api_Controller extends MVC_Controller
                             "sim" => (int) ($message["mode"] < 2 ? $message["sim"] : ($message["gateway"] > 0 ? 0 : $message["sim"])),
                             "priority" => $message["mode"] < 2 ? ($message["priority"] < 2 ? false : true) : ($message["gateway"] > 0 ? false : ($message["priority"] < 2 ? false : true)),
                             "api" => $message["api"] < 2 ? true : false,
-                            "status" => $message["status"] < 4 ? "sent" : "failed",
+                            "status" => smsStatusParser($message["status"]),
                             "status_code" => $message["status_code"],
                             "recipient" => $message["phone"],
                             "message" => $message["message"],
@@ -3550,6 +3637,15 @@ class Api_Controller extends MVC_Controller
                             case 13:
                                 $android = "Android 13";
                                 break;
+                            case 14:
+                                $android = "Android 14";
+                                break;
+                            case 15:
+                                $android = "Android 15";
+                                break;
+                            case 16:
+                                $android = "Android 16";
+                                break;
                             default:
                                 $android = "Unknown";
                         endswitch;
@@ -3560,16 +3656,12 @@ class Api_Controller extends MVC_Controller
                         $deviceArray[] = [
                             "id" => (int) $device["id"],
                             "unique" => $device["did"],
-                            "online" => $echoToken ? $this->echo->status($device["online_id"], $this->guzzle, $this->cache) : false,
                             "name" => $device["name"],
                             "version" => $android,
                             "manufacturer" => $device["manufacturer"],
                             "random_send" => $device["random_send"] < 2 ? true : false,
                             "random_min" => (int) $device["random_min"],
                             "random_max" => (int) $device["random_max"],
-                            "limit_status" => $device["limit_status"] < 2 ? true : false,
-                            "limit_interval" => $device["limit_interval"] < 2 ? "daily" : "monthly",
-                            "limit_number" => (int) $device["limit_number"],
                             "notification_packages" => empty($device["packages"]) ? [] : array_filter(array_map("trim", explode("\n", $device["packages"]))),
                             "partner" => $device["global_device"] < 2 ? true : false,
                             "partner_sim" => is_array($slots) ? $slots : [],
@@ -3644,6 +3736,15 @@ class Api_Controller extends MVC_Controller
                             case 13:
                                 $android = "Android 13";
                                 break;
+                            case 14:
+                                $android = "Android 14";
+                                break;
+                            case 15:
+                                $android = "Android 15";
+                                break;
+                            case 16:
+                                $android = "Android 16";
+                                break;
                             default:
                                 $android = "Unknown";
                         endswitch;
@@ -3661,7 +3762,7 @@ class Api_Controller extends MVC_Controller
                             "currency" => strtoupper($currency),
                             "rate" => (int) $partner["rate"],
                             "owner" => $partner["owner"],
-                            "status" => $partner["status"] < 2 ? "online" : "offline"
+                            "status" => "offline"
                         ];
                     endforeach;
                 endif;
@@ -4021,9 +4122,11 @@ class Api_Controller extends MVC_Controller
 
                 if($this->system->delete($api["uid"], $request["id"], "sent")):
                     try {
-                        $this->fcm->send(md5($api["uid"] . $sent["did"]), [
-                            "type" => "sms_delete",
-                            "id" => $request["id"]
+                        $device = $this->system->getDevice($api["uid"], $sent["did"], "did");
+
+                        $this->fcm->sendWithToken($device["fcm_token"], [
+                            "action" => "message_delete",
+							"message_id" => $request["id"]
                         ]);
                     } catch(Exception $e) {
                         // Ignore
@@ -4048,11 +4151,15 @@ class Api_Controller extends MVC_Controller
                 if($this->api->checkSmsCampaign($request["campaign"], $api["uid"]) < 1)
                     response(400, "Invalid Parameters!");
 
+                $campaign = $this->system->getSmsCampaign($api["uid"], $request["id"]);
+
                 if($this->system->delete($api["uid"], $request["id"], "campaigns")):
                     if($this->system->clearCampaignSms($api["uid"], $request["id"])):
-                        $this->fcm->send($this->hash->encode($api["uid"], system_token), [
-                            "type" => "sms_campaign_delete",
-                            "cid" => $request["id"]
+                        $device = $this->system->getDevice($api["uid"], $campaign["did"], "did");
+
+                        $this->fcm->sendWithToken($device["fcm_token"], [
+                            "action" => "campaign_delete",
+                            "campaign_id" => $request["id"]
                         ]);
                     endif;
 
@@ -4230,7 +4337,20 @@ class Api_Controller extends MVC_Controller
                 if(!$this->sanitize->isInt($request["id"]))
                     response(400, "Invalid Parameters!");
 
+                $ussd = $this->system->getUssd($request["id"], $api["uid"]);
+
                 if($this->system->delete($api["uid"], $request["id"], "ussd")):
+                    if($ussd):
+                        $device = $this->system->getDevice($api["uid"], $ussd["did"], "did");
+                        
+                        if($device):
+                            $this->fcm->sendWithToken($device["fcm_token"], [
+                                "action" => "ussd_delete",
+                                "ussd_id" => $ussd["id"]
+                            ]);
+                        endif;
+                    endif;
+                    
                     response(200, "USSD request has been deleted!");
                 else:
                     response(500, "Something went wrong!");

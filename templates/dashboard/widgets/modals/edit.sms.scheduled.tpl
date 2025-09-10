@@ -33,7 +33,7 @@
                         </label>
                         <select name="device" class="form-control" data-live-search="true">
                             {foreach $data.devices as $device}
-                            <option value="{$device@key}" data-tokens="{$device.token}" data-content="{$device.name} <span class='badge badge-{if $device.status < 2}success{else}danger{/if} device-status-{$device.id}'>{if $device.status < 2}{__("form_status_online")}{else}{__("form_status_offline")}{/if}</span>" {if $device@key eq $data.scheduled.did}selected{/if}>{$device.name}</option>
+                            <option value="{$device@key}" data-tokens="{$device.token}" data-content="{$device.name}" {if $device@key eq $data.scheduled.did}selected{/if}>{$device.name}</option>
                             {/foreach}
                         </select>
                     </div>
@@ -51,7 +51,7 @@
                             <option data-divider="true"></option>
                             {/if}
                             {foreach $data.devicesGlobal as $device}
-                            <option value="{$device@key}" data-tokens="{$device.token}" data-content="<i class='flag-icon flag-icon flag-icon-{strtolower($device.country)}'></i> {$device.name} <span class='badge badge-{if $device.status < 2}success{else}danger{/if} device-status-{$device.id}'>{if $device.status < 2}{__("form_status_online")}{else}{__("form_status_offline")}{/if}</span> <span class='badge badge-primary'>{__("form_smsall_globalstatus")}</span> ({$device.rate} PHP)" {if $device@key eq $data.scheduled.did}selected{/if}>{$device.name} ({__("form_smsall_globalstatus")})</option>
+                            <option value="{$device@key}" data-tokens="{$device.token}" data-content="<i class='flag-icon flag-icon flag-icon-{strtolower($device.country)}'></i> {$device.name} <span class='badge badge-primary'>{__("form_smsall_globalstatus")}</span> ({$device.rate} PHP)" {if $device@key eq $data.scheduled.did}selected{/if}>{$device.name} ({__("form_smsall_globalstatus")})</option>
                             {/foreach}
                             {/if}
                         </select>

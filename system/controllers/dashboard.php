@@ -453,7 +453,7 @@ class Dashboard_Controller extends MVC_Controller
 
         switch($page){
             case "plugins":
-                $vars["title"] = __("dashboard_title_aiplugins");
+                $vars["title"] = __("ai_menu_title_aikeys");
 
                 break;
             default:
@@ -546,8 +546,6 @@ class Dashboard_Controller extends MVC_Controller
                 $vars["title"] = __("and_admin_payout_3");
 
                 break;
-
-                break;
             case "pages":
                 $vars["title"] = __("dashboard_pages_title");
 
@@ -578,7 +576,7 @@ class Dashboard_Controller extends MVC_Controller
                 break;
             default:
                 $vars["title"] = __("dashboard_title_admin");
-                $vars["data"]["gateway"] = $this->file->exists("uploads/builder/" . strtolower(system_package_name . ".apk"));
+                $vars["data"]["gateway"] = $this->file->exists("uploads/builder/gateway.apk");
         }
 
         $vars["page"] = "admin/{$page}";

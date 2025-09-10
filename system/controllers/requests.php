@@ -352,27 +352,6 @@ class Requests_Controller extends MVC_Controller
 	            	response(500, __("response_went_wrong"));
 
 				break;
-			case "download":
-				$type = $this->sanitize->string($this->url->segment(5));
-
-				if(!in_array($type, ["gateway", "dashboard"]))
-					response(500, __("response_invalid"));
-
-				if($type == "gateway"):
-					$gateway = strtolower(system_package_name . ".apk");
-
-					if($this->file->exists("uploads/builder/{$gateway}")):
-						response(200, __("response_gateway_available"), [
-							"link" => site_url . "/uploads/builder/{$gateway}?_=" . time()
-						]);
-					else:
-						response(500, __("response_gateway_unavailable"));
-					endif;
-				else:
-					response(500, __("response_invalid"));
-				endif;
-
-				break;
 			case "livechat":
 				if(!$this->session->has("logged"))
 	            	response(302);
@@ -391,7 +370,7 @@ class Requests_Controller extends MVC_Controller
 	            if(!super_admin)
 					response(500, __("response_no_permission"));
 
-	            response(200, false, titansys_api . "/authenticate");
+	            response(200, false, titansys_api . "/authenticate/support");
 	            
 				break;
 			case "regenerate_admintoken":
@@ -644,86 +623,6 @@ class Requests_Controller extends MVC_Controller
 		endswitch;
 	}
 
-	public function build()
-	{
-		$this->header->allow(site_url);
-
-		if(!$this->session->has("logged"))
-        	response(302);
-
-		$this->cache->container("system.settings");
-
-        if($this->cache->empty()):
-            $this->cache->setArray($this->system->getSettings());
-        endif;
-
-        set_system($this->cache->getAll());
-
-        set_logged($this->session->get("logged"));
-
-        set_language(logged_language);
-
-        if(!super_admin)
-			response(500, __("response_no_permission"));
-
-        if(!$this->sanitize->length(system_purchase_code, 5))
-        	response(500, __("response_pcode_empty"));
-
-        if(!$this->file->exists("system/storage/temporary/google.json"))
-        	response(500, __("response_build_gservicesfile"));
-
-        if(!$this->file->exists("system/storage/temporary/firebase.json"))
-        	response(500, __("response_build_fcredentialsfile"));
-
-        if(!$this->file->exists("uploads/builder/icon.png"))
-        	response(500, __("response_upload_appicon"));
-
-        if(!$this->file->exists("uploads/builder/logo.png"))
-        	response(500, __("response_upload_applogo"));
-
-        if(!$this->file->exists("uploads/builder/logo-login.png"))
-        	response(500, __("response_build_loginlogo"));
-
-        if(!$this->file->exists("uploads/builder/splash.png"))
-        	response(500, __("response_upload_appsplash"));
-
-        try {
-        	$build = $this->guzzle->post(titansys_api . "/zender/builder", [
-	            "form_params" => [
-	            	"token" => system_token,
-	            	"code" => system_purchase_code,
-	            	"site_url" => site_url(false, true),
-	            	"package_name" => strtolower(system_package_name),
-	            	"build_email" => system_build_email,
-	            	"app_name" => system_app_name,
-	            	"app_desc" => system_app_desc,
-	            	"app_color" => system_app_color,
-	            	"apk_version" => system_apk_version,
-	            	"app_icon_remote" => system_app_icon_remote,
-	            	"app_splash_remote" => system_app_splash_remote,
-	            	"app_logo_remote" => system_app_logo_remote,
-	            	"app_loginlogo_remote" => system_app_loginlogo_remote,
-	            	"app_js" => system_app_js,
-	            	"app_css" => system_app_css,
-	            	"app_layout" => system_app_layout,
-	            	"google_services" => $this->file->get("system/storage/temporary/google.json")
-	            ],
-	            "allow_redirects" => true,
-	            "http_errors" => false
-	        ]);
-
-	        $response = json_decode($build->getBody()->getContents());
-
-	        if($response->status == 200):
-	        	$this->file->delete("uploads/builder/" . strtolower(system_package_name . ".apk"));
-	        endif;
-
-	        response($response->status == 200 ? 200 : 500, $response->message);
-        } catch(Exception $e){
-        	response(500, __("response_buildserver_false"));
-        }
-	}
-
 	public function languages()
 	{
 		$this->header->allow(site_url);
@@ -752,17 +651,9 @@ class Requests_Controller extends MVC_Controller
 	        	response(500, __("response_invalid"));
 
 			if(logged_id):
-				if($this->system->update(logged_id, false, "users", [
+				$this->system->update(logged_id, false, "users", [
 					"language" => $language
-				])):
-					$this->session->set("logged", $this->system->getUser(logged_id));
-
-					$this->fcm->send($this->hash->encode(logged_id, system_token), [
-				    	"type" => "language"
-				    ]);
-				else:
-					response(500, __("response_went_wrong"));
-				endif;
+				]);
 			else:
 				$this->session->set("language", $language);
 			endif;
@@ -830,36 +721,6 @@ class Requests_Controller extends MVC_Controller
 			);
 
 			response(200);
-		elseif($type == "offline"):
-			if(!isset($request["id"]))
-				response(500);
-
-        	$device = $this->system->getDevice(false, $request["id"], "sid");
-
-        	if($device && $device["uid"] == logged_id):
-	        	if($this->system->updateOffline($request["id"])):
-	        		response(200, false, [
-	        			"device" => $device["id"]
-	        		]);
-	        	endif;
-        	else:
-        		response(500);
-        	endif;
-		elseif($type == "online"):
-			if(!isset($request["did"]))
-				response(500);
-
-			$device = $this->system->getDevice(false, $request["did"], "global");
-
-        	if($device && $device["uid"] == logged_id):
-	        	if($this->system->updateOnline($request["did"])):
-	        		response(200, false, [
-	        			"device" => $device["id"]
-	        		]);
-	        	endif;
-        	else:
-        		response(500);
-        	endif;
 		else:
 			try {
 				$echoToken = $this->echo->token($this->guzzle, $this->cache);
@@ -1681,9 +1542,10 @@ class Requests_Controller extends MVC_Controller
 						"status" => 1
 					])):
 						$sent = $this->system->getSent($id);
+						$device = $this->system->getDevice(logged_id, $sent["did"], "did");
 
-						$this->fcm->send(md5(logged_id . $sent["did"]), [
-					    	"type" => "resend"
+						$this->fcm->sendWithToken($device["fcm_token"], [
+					    	"action" => "message_request"
 					    ]);
 					endif;
 
@@ -1875,17 +1737,6 @@ class Requests_Controller extends MVC_Controller
 				response(200, __("response_clear_systemcleared"));
 
 				break;
-			case "ussd":
-				if($this->system->clearUssd(logged_id)):
-					$this->fcm->send($this->hash->encode(logged_id, system_token), [
-				    	"type" => "clear_ussd",
-				    	"uid" => (int) logged_id
-				    ]);
-				endif;
-
-				response(200, __("response_clear_ussdcleared"));
-
-				break;
 			default:
 				response(500, __("response_invalid"));
 		endswitch;
@@ -1921,11 +1772,15 @@ class Requests_Controller extends MVC_Controller
 				if($this->system->update($request["cid"], logged_id, "campaigns", [
 					"status" => 1
 				])):
-					$this->fcm->send(md5(logged_id . $request["did"]), [
-				    	"type" => "start_sms",
-				    	"cid" => (int) $request["cid"],
-				    	"name" => $request["name"]
-				    ]);
+					$device = $this->system->getDevice(logged_id, $request["did"], "did");
+
+					if($device):
+						$this->fcm->sendWithToken($device["fcm_token"], [
+					    	"action" => "campaign_request",
+					    	"campaign_id" => (int) $request["cid"],
+							"campaign_status" => "start"
+					    ]);
+					endif;
 				endif;
 
 				response(200, __("requests_remote_smscampaignresumed"));
@@ -1938,11 +1793,15 @@ class Requests_Controller extends MVC_Controller
 				if($this->system->update($request["cid"], logged_id, "campaigns", [
 					"status" => 2
 				])):
-					$this->fcm->send(md5(logged_id . $request["did"]), [
-				    	"type" => "stop_sms",
-				    	"cid" => (int) $request["cid"],
-				    	"name" => $request["name"]
-				    ]);
+					$device = $this->system->getDevice(logged_id, $request["did"], "did");
+
+					if($device):
+						$this->fcm->sendWithToken($device["fcm_token"], [
+					    	"action" => "campaign_request",
+					    	"campaign_id" => (int) $request["cid"],
+							"campaign_status" => "stop"
+					    ]);
+					endif;
 				endif;
 
 				response(200, __("requests_remote_smscampaignpaused"));
@@ -2088,11 +1947,15 @@ class Requests_Controller extends MVC_Controller
 				foreach($request["rows"] as $row):
 					$sent = $this->system->getSent(str_replace("#", "", $row));
 
-					if($sent["status"] < 3):
-						$this->fcm->send($this->hash->encode(logged_id, system_token), [
-							"type" => "sms_delete",
-							"id" => str_replace("#", "", $row)
-						]);
+					if($sent):
+						if($sent["status"] < 3):
+							$device = $this->system->getDevice(logged_id, $sent["did"], "did");
+
+							$this->fcm->sendWithToken($device["fcm_token"], [
+								"action" => "message_delete",
+								"message_id" => str_replace("#", "", $row)
+							]);
+						endif;
 					endif;
 
 					$this->system->delete(logged_id, str_replace("#", "", $row), "sent");
@@ -2199,6 +2062,19 @@ class Requests_Controller extends MVC_Controller
 				break;
 			case "android.ussd":
 				foreach($request["rows"] as $row):
+					$ussd = $this->system->getUssd(str_replace("#", "", $row), logged_id);
+
+					if($ussd):
+						$device = $this->system->getDevice(logged_id, $ussd["did"], "did");
+						
+						if($device):
+							$this->fcm->sendWithToken($device["fcm_token"], [
+								"action" => "ussd_delete",
+								"ussd_id" => $ussd["id"]
+							]);
+						endif;
+					endif;
+					
 					$this->system->delete(logged_id, str_replace("#", "", $row), "ussd");
 				endforeach;
 
@@ -2497,11 +2373,6 @@ class Requests_Controller extends MVC_Controller
     					response(500, __("response_invalid"));
 
 	    			$device = $this->system->getDevice(logged_id, $request["device"], "did");
-
-	    			if($device["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $request["device"], $device["limit_interval"], $device["limit_number"])):
-	    				$intervalType = $device["limit_interval"] < 2 ? __("requests_sms_intervaltypedaily") : __("requests_sms_intervaltypemonthly");
-	    				response(500, ___(__("requests_sms_intervaltypereachedmax"), [$intervalType]));
-	    			endif;
         		else:
         			if(!isset($request["gateway"]))
         				response(500, __("response_invalid"));
@@ -2528,11 +2399,6 @@ class Requests_Controller extends MVC_Controller
 		    				if($device["uid"] == logged_id):
 		    					response(500, __("requests_sms_gatewaycannotsendowndevices"));
 		    				endif;
-
-		    				if($device["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $request["gateway"], $device["limit_interval"], $device["limit_number"])):
-			    				$intervalType = $device["limit_interval"] < 2 ? __("requests_sms_intervaltypedaily") : __("requests_sms_intervaltypemonthly");
-			    				response(500, ___(__("requests_sms_intervaltypereachedmax"), [$intervalType]));
-			    			endif;
 
 			    			if($device["global_device"] > 1):
 			    				response(500, __("response_invalid"));
@@ -2694,26 +2560,14 @@ class Requests_Controller extends MVC_Controller
 								"api" => 2,
 								"create_date" => date("Y-m-d H:i:s", time())
 							]);
-					endif;
+						endif;
 					endif;
 				endif;
 
-				if($request["mode"] < 2):
-					$this->fcm->send(md5(logged_id . $request["device"]), [
-				    	"type" => "sms",
-				    	"global" => 0,
-				    	"currency" => "None",
-				    	"rate" => (float) 0
-				    ]);
-				else:
-					if(!$this->sanitize->isInt($request["gateway"])):
-						$this->fcm->send(md5($device["uid"] . $request["gateway"]), [
-					    	"type" => "sms",
-					    	"global" => 1,
-					    	"currency" => $currency,
-					    	"rate" => (float) $device["rate"]
-					    ]);
-					endif;
+				if($request["mode"] < 2 || !$this->sanitize->isInt($request["gateway"])):
+					$this->fcm->sendWithToken($device["fcm_token"], [
+						"action" => "message_request"
+					]);
 				endif;
 
 				response(200, __("response_message_queued"));
@@ -2826,7 +2680,7 @@ class Requests_Controller extends MVC_Controller
 
 				$contactBook = [];
 
-				$numbers = explode("\n", trim($request["numbers"]));
+				$numbers = explode(",", $this->sanitize->normalizeContactsCommas($request["numbers"]));
 
 				if(!empty($numbers) && !empty($numbers[0])):
 					foreach($numbers as $number):
@@ -2983,10 +2837,6 @@ class Requests_Controller extends MVC_Controller
 								if(!limitation($subscription["send_limit"], $this->system->countQuota(logged_id, "sent"))):
 									$rejectLimit = false;
 		
-									if($distItem["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $distItem["did"], $distItem["limit_interval"], $distItem["limit_number"])):
-										$rejectLimit = true;
-									endif;
-		
 									if(!$rejectLimit):
 										$this->system->create("sent", [
 											"cid" => $smsCampaign,
@@ -3122,10 +2972,6 @@ class Requests_Controller extends MVC_Controller
 		
 										$rejectLimit = false;
 		
-										if($distItem["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $distItem["did"], $distItem["limit_interval"], $distItem["limit_number"])):
-											$rejectLimit = true;
-										endif;
-		
 										if(!$rejectLimit):
 											$this->system->create("sent", [
 												"cid" => $smsCampaign,
@@ -3158,34 +3004,16 @@ class Requests_Controller extends MVC_Controller
 												"api" => 2,
 												"create_date" => date("Y-m-d H:i:s", time())
 											]);
-		
-											if($distItem["limit_status"] < 2):
-												$sendCounter++;
-											endif;
 										endif;
 									endif;
 								endif;
 							endif;
 						endforeach;
-						
-						if($request["mode"] < 2):
-							$this->fcm->send(md5(logged_id . $distItem["did"]), [
-								"type" => "sms",
-								"global" => 0,
-								"currency" => "None",
-								"rate" => (float) 0
+
+						if($request["mode"] < 2 || (!isset($distItem["external_id"]) && !$this->sanitize->isInt($distItem["did"]))):
+							$this->fcm->sendWithToken($distItem["fcm_token"], [
+								"action" => "message_request"
 							]);
-						else:
-							if(!isset($distItem["external_id"])):
-								if(!$this->sanitize->isInt($distItem["did"])):
-									$this->fcm->send(md5($distItem["uid"] . $distItem["did"]), [
-										"type" => "sms",
-										"global" => 1,
-										"currency" => $currency,
-										"rate" => (float) $distItem["rate"]
-									]);
-								endif;
-							endif;
 						endif;
 					endif;
 				endforeach;
@@ -3475,10 +3303,6 @@ class Requests_Controller extends MVC_Controller
 								if(!limitation($subscription["send_limit"], $this->system->countQuota(logged_id, "sent"))):
 									$rejectLimit = false;
 		
-									if($distItem["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $distItem["did"], $distItem["limit_interval"], $distItem["limit_number"])):
-										$rejectLimit = true;
-									endif;
-		
 									if(!$rejectLimit):
 										$this->system->create("sent", [
 											"cid" => $smsCampaign,
@@ -3608,10 +3432,6 @@ class Requests_Controller extends MVC_Controller
 		
 										$rejectLimit = false;
 		
-										if($distItem["limit_status"] < 2 && $this->system->checkSmsLimit(logged_id, $distItem["did"], $distItem["limit_interval"], $distItem["limit_number"])):
-											$rejectLimit = true;
-										endif;
-		
 										if(!$rejectLimit):
 											$this->system->create("sent", [
 												"cid" => $smsCampaign,
@@ -3641,34 +3461,16 @@ class Requests_Controller extends MVC_Controller
 												"api" => 2,
 												"create_date" => date("Y-m-d H:i:s", time())
 											]);
-		
-											if($distItem["limit_status"] < 2):
-												$sendCounter++;
-											endif;
 										endif;
 									endif;
 								endif;
 							endif;
 						endforeach;
 
-						if($request["mode"] < 2):
-							$this->fcm->send(md5(logged_id . $distItem["did"]), [
-								"type" => "sms",
-								"global" => 0,
-								"currency" => "None",
-								"rate" => (float) 0
+						if($request["mode"] < 2 || (!isset($distItem["external_id"]) && !$this->sanitize->isInt($distItem["did"]))):
+							$this->fcm->sendWithToken($distItem["fcm_token"], [
+								"action" => "message_request"
 							]);
-						else:
-							if(!isset($distItem["external_id"])):
-								if(!$this->sanitize->isInt($distItem["did"])):
-									$this->fcm->send(md5($distItem["uid"] . $distItem["did"]), [
-										"type" => "sms",
-										"global" => 1,
-										"currency" => $currency,
-										"rate" => (float) $distItem["rate"]
-									]);
-								endif;
-							endif;
 						endif;
 					endif;
 				endforeach;
@@ -3763,7 +3565,7 @@ class Requests_Controller extends MVC_Controller
 							"gateway" => 0,
 							"groups" => implode(",", $request["groups"]),
 							"name" => $request["name"],
-							"numbers" => $request["numbers"],
+							"numbers" => $this->sanitize->normalizeContactsCommas($request["numbers"]),
 							"message" => $request["message"],
 							"repeat" => $request["repeat"],
 							"last_send" => false,
@@ -4013,6 +3815,10 @@ class Requests_Controller extends MVC_Controller
 			    						$docMimetype = "application/pdf";
 
 			    						break;
+									case "xml":
+										$docMimetype = "application/xml";
+										
+										break;
 			    					case "xls":
 			    						$docMimetype = "application/excel";
 			    						
@@ -4211,7 +4017,7 @@ class Requests_Controller extends MVC_Controller
 
 				$contactBook = [];
 
-				$numbers = explode("\n", trim($request["numbers"]));
+				$numbers = explode(",", $this->sanitize->normalizeContactsCommas($request["numbers"]));
 
 				if(!empty($numbers) && !empty($numbers[0])):
 					foreach($numbers as $number):
@@ -4396,6 +4202,10 @@ class Requests_Controller extends MVC_Controller
 			    						$docMimetype = "application/pdf";
 
 			    						break;
+									case "xml":
+										$docMimetype = "application/xml";
+										
+										break;
 			    					case "xls":
 			    						$docMimetype = "application/excel";
 			    						
@@ -5063,6 +4873,10 @@ class Requests_Controller extends MVC_Controller
 										$docMimetype = "application/pdf";
 
 										break;
+									case "xml":
+										$docMimetype = "application/xml";
+										
+										break;
 									case "xls":
 										$docMimetype = "application/excel";
 										
@@ -5128,7 +4942,7 @@ class Requests_Controller extends MVC_Controller
 					"unique" => $account["unique"],
 					"groups" => implode(",", $request["groups"]),
 					"name" => $request["name"],
-					"numbers" => $request["numbers"],
+					"numbers" => $this->sanitize->normalizeContactsCommas($request["numbers"]),
 					"message" => json_encode($message),
 					"repeat" => $request["repeat"],
 					"last_send" => false,
@@ -5238,9 +5052,9 @@ class Requests_Controller extends MVC_Controller
 				];
 
 				if($this->system->create("ussd", $filtered)):
-					$this->fcm->send(md5(logged_id . $request["device"]), [
-				    	"type" => "ussd"
-				    ]);
+					$this->fcm->sendWithToken($device["fcm_token"], [
+						"action" => "ussd_request"
+					]);
 
 					response(200, __("response_ussd_queued"));
 				else:
@@ -5275,7 +5089,7 @@ class Requests_Controller extends MVC_Controller
 
         		break;
 			case "add.ai.key":
-				if(!isset($request["name"], $request["provider"], $request["prompt"], $request["post_prompt"], $request["model_openai"], $request["model_geminiai"], $request["model_claudeai"], $request["history"], $request["group_reply"], $request["max_tokens"], $request["vision"], $request["transcription"], $request["apikey"]))
+				if(!isset($request["name"], $request["provider"], $request["prompt"], $request["post_prompt"], $request["model_openai"], $request["model_geminiai"], $request["model_claudeai"], $request["model_deepseekai"], $request["history"], $request["max_tokens"], $request["transcription"], $request["apikey"]))
 					response(500, __("response_invalid"));
 
 				if(!$this->sanitize->length($request["name"]))
@@ -5284,7 +5098,7 @@ class Requests_Controller extends MVC_Controller
 				if(!$this->sanitize->length($request["prompt"], 5))
 					response(500, __("response_addaikey_promptshort"));
 
-				if(!in_array($request["provider"], ["openai", "geminiai", "claudeai"]))
+				if(!in_array($request["provider"], ["openai", "geminiai", "claudeai", "deepseekai"]))
 					response(500, __("response_invalid"));
 
 				$aiModel = false;
@@ -5313,20 +5127,30 @@ class Requests_Controller extends MVC_Controller
 					$aiModel = $request["model_claudeai"];
 				endif;
 
+				if($request["provider"] == "deepseekai"):
+					if(!in_array($request["model_deepseekai"], ["deepseek-chat"])):
+						response(500, __("response_addaikey_modelinval"));
+					endif;
+
+					$aiModel = $request["model_deepseekai"];
+				endif;
+
 				if(!$aiModel)
 					response(500, __("response_invalid"));
 
 				if(!$this->sanitize->isInt($request["history"]))
 					response(500, __("response_addaikey_histothres"));
 
-				if(!$this->sanitize->isInt($request["group_reply"]))
-					response(500, __("response_invalid"));
-
 				if(!$this->sanitize->isInt($request["max_tokens"]))
 					response(500, __("response_invalid"));
 
-				if(!$this->sanitize->isInt($request["vision"]))
-					response(500, __("response_invalid"));
+				if(isset($request["vision"])):
+					if(!$this->sanitize->isInt($request["vision"])):
+						response(500, __("response_invalid"));
+					endif;
+				else:
+					$request["vision"] = 2;
+				endif;
 
 				if(!$this->sanitize->isInt($request["transcription"]))
 					response(500, __("response_invalid"));
@@ -5344,7 +5168,6 @@ class Requests_Controller extends MVC_Controller
 					"post_prompt" => $request["post_prompt"],
 					"model" => $aiModel,
 					"history" => $request["history"],
-					"group_reply" => $request["group_reply"] < 2 ? 1 : 2,
 					"max_tokens" => $request["max_tokens"],
 					"vision" => $request["vision"] < 2 ? 1 : 2,
 					"transcription" => $request["transcription"] < 2 ? 1 : 2,
@@ -5808,7 +5631,9 @@ class Requests_Controller extends MVC_Controller
 					"device" => false,
 					"priority" => 0,
 					"match" => 0,
-					"account" => false
+					"account" => false,
+					"ai_key" => 0,
+					"ai_plugins" => false
 				];
 
 				if($this->system->create("actions", $filtered)):
@@ -5882,6 +5707,14 @@ class Requests_Controller extends MVC_Controller
 					$request["ai_plugins"] = [];
 				endif;
 
+				if(isset($request["group_trigger"])):
+					if(!$this->sanitize->isInt($request["group_trigger"])):
+						response(500, __("response_invalid"));
+					endif;
+				else:
+					$request["group_trigger"] = 2;
+				endif;
+
 				if($request["source"] < 2):
 					// sms
 
@@ -5907,7 +5740,7 @@ class Requests_Controller extends MVC_Controller
 						"name" => $request["name"],
 						"event" => 0,
 						"priority" => 2,
-						"keywords" => $request["keywords"],
+						"keywords" => $this->sanitize->cleanAutoreplyKeywordCommas($request["keywords"]),
 						"message" => $request["message"],
 						"link" => false
 					];
@@ -5919,7 +5752,7 @@ class Requests_Controller extends MVC_Controller
 
 					if(!in_array($request["message_type"], ["text", "media", "document"]))
 						response(500, __("response_invalid"));
-					
+
 					if($this->system->checkWaAccount(logged_id, $request["account"], "id") < 1)
 						response(500, __("response_invalid"));
 
@@ -6054,13 +5887,14 @@ class Requests_Controller extends MVC_Controller
 						"match" => $request["match"],
 						"ai_key" => $request["ai_key"],
 						"ai_plugins" => implode(",", $request["ai_plugins"]),
+						"group_trigger" => $request["group_trigger"] < 2 ? 1 : 2,
 						"sim" => 0,
 						"device" => false,
 						"account" => $request["account"],
 						"name" => $request["name"],
 						"event" => 0,
 						"priority" => $request["priority"] < 2 ? 1 : 2,
-						"keywords" => $request["keywords"],
+						"keywords" => $this->sanitize->cleanAutoreplyKeywordCommas($request["keywords"]),
 						"message" => json_encode($message),
 						"link" => false
 					];
@@ -6553,28 +6387,15 @@ class Requests_Controller extends MVC_Controller
 
 	            	if($this->system->create("marketing", $filtered)):
 		        		foreach($users as $user):
-							if($this->file->exists("uploads/temporary/{$image}.png")):
-								$this->fcm->send($this->hash->encode($user, system_token), [
-									"type" => "push",
-							    	"title" => $filtered["title"],
-							    	"content" => $filtered["content"],
-							    	"image" => site_url("uploads/temporary/{$image}.png", true)
-								], [
-							    	"title" => $filtered["title"],
-							    	"body" => $filtered["content"],
-							    	"image" => site_url("uploads/temporary/{$image}.png", true)
-							    ]);
-							else:
-								$this->fcm->send($this->hash->encode($user, system_token), [
-									"type" => "push",
-							    	"title" => $filtered["title"],
-							    	"content" => $filtered["content"],
-							    	"image" => "false"
-								], [
-							    	"title" => $filtered["title"],
-							    	"body" => $filtered["content"]
-							    ]);
-							endif;
+							$userDevices = $this->system->getDevices($user);
+							
+							foreach($userDevices as $device):
+								if($this->file->exists("uploads/temporary/{$image}.png")):
+									$this->fcm->sendWithNotification($device["fcm_token"], $filtered["title"], $filtered["content"], site_url("uploads/temporary/{$image}.png", true));
+								else:
+									$this->fcm->sendWithNotification($device["fcm_token"], $filtered["title"], $filtered["content"]);
+								endif;	
+							endforeach;
 						endforeach;
 	        		else:
 	        			response(500, __("response_went_wrong"));
@@ -7184,7 +7005,7 @@ class Requests_Controller extends MVC_Controller
 
         $type = $this->sanitize->string($this->url->segment(4));
         $request = $this->sanitize->array($_POST, 
-        	in_array($type, ["edit.ai.plugin", "edit.page", "edit.gateway", "admin.theme", "admin.builder", "admin.settings"]) ? ["content", "layout", "script", "css", "bank_template"] : []
+        	in_array($type, ["edit.ai.plugin", "edit.page", "edit.gateway", "admin.theme", "admin.settings"]) ? ["content", "layout", "script", "css", "bank_template"] : []
     	);
 
         if(!isset($request["id"]) || !$this->sanitize->isInt($request["id"]))
@@ -7356,7 +7177,7 @@ class Requests_Controller extends MVC_Controller
 							"gateway" => 0,
 							"groups" => implode(",", $request["groups"]),
 							"name" => $request["name"],
-							"numbers" => $request["numbers"],
+							"numbers" => $this->sanitize->normalizeContactsCommas($request["numbers"]),
 							"message" => $request["message"],
 							"repeat" => $request["repeat"],
 							"last_send" => false,
@@ -7471,7 +7292,7 @@ class Requests_Controller extends MVC_Controller
         		$filtered = [
 					"groups" => implode(",", $request["groups"]),
 					"name" => $request["name"],
-					"numbers" => $request["numbers"],
+					"numbers" => $this->sanitize->normalizeContactsCommas($request["numbers"]),
 					"message" => json_encode($decodeMessage),
 					"repeat" => $request["repeat"],
 					"send_date" => strtotime($request["schedule"])
@@ -7549,7 +7370,7 @@ class Requests_Controller extends MVC_Controller
 
         		break;
 			case "edit.ai.key":
-				if(!isset($request["name"], $request["provider"], $request["prompt"], $request["post_prompt"], $request["model_openai"], $request["model_geminiai"], $request["model_claudeai"], $request["history"], $request["group_reply"], $request["max_tokens"], $request["vision"], $request["transcription"], $request["apikey"],))
+				if(!isset($request["name"], $request["provider"], $request["prompt"], $request["post_prompt"], $request["model_openai"], $request["model_geminiai"], $request["model_claudeai"], $request["model_deepseekai"], $request["history"], $request["max_tokens"], $request["transcription"], $request["apikey"]))
 					response(500, __("response_invalid"));
 
 				if(!$this->sanitize->length($request["name"]))
@@ -7557,6 +7378,9 @@ class Requests_Controller extends MVC_Controller
 
 				if(!$this->sanitize->length($request["prompt"], 5))
 					response(500, __("response_editaikey_promptshort"));
+
+				if(!in_array($request["provider"], ["openai", "geminiai", "claudeai", "deepseekai"]))
+					response(500, __("response_invalid"));
 
 				$aiModel = false;
 
@@ -7584,20 +7408,30 @@ class Requests_Controller extends MVC_Controller
 					$aiModel = $request["model_claudeai"];
 				endif;
 
+				if($request["provider"] == "deepseekai"):
+					if(!in_array($request["model_deepseekai"], ["deepseek-chat"])):
+						response(500, __("response_addaikey_modelinval"));
+					endif;
+
+					$aiModel = $request["model_deepseekai"];
+				endif;
+
 				if(!$aiModel)
 					response(500, __("response_invalid"));
 
 				if(!$this->sanitize->isInt($request["history"]))
 					response(500, __("response_editaikey_histothres"));
 
-				if(!$this->sanitize->isInt($request["group_reply"]))
-					response(500, __("response_invalid"));
-
 				if(!$this->sanitize->isInt($request["max_tokens"]))
 					response(500, __("response_invalid"));
 
-				if(!$this->sanitize->isInt($request["vision"]))
-					response(500, __("response_invalid"));
+				if(isset($request["vision"])):
+					if(!$this->sanitize->isInt($request["vision"])):
+						response(500, __("response_invalid"));
+					endif;
+				else:
+					$request["vision"] = 2;
+				endif;
 
 				if(!$this->sanitize->isInt($request["transcription"]))
 					response(500, __("response_invalid"));
@@ -7614,7 +7448,6 @@ class Requests_Controller extends MVC_Controller
 					"post_prompt" => $request["post_prompt"],
 					"model" => $aiModel,
 					"history" => $request["history"],
-					"group_reply" => $request["group_reply"] < 2 ? 1 : 2,
 					"max_tokens" => $request["max_tokens"],
 					"vision" => $request["vision"] < 2 ? 1 : 2,
 					"transcription" => $request["transcription"] < 2 ? 1 : 2,
@@ -7735,7 +7568,7 @@ class Requests_Controller extends MVC_Controller
 
         		break;
         	case "edit.device":
-        		if(!isset($request["name"], $request["receive_sms"], $request["random_send"], $request["random_min"], $request["random_max"], $request["limit_status"], $request["limit_interval"], $request["limit_number"], $request["packages"]))
+        		if(!isset($request["name"], $request["receive_sms"], $request["random_send"], $request["random_min"], $request["random_max"], $request["packages"]))
         			response(500, __("response_invalid"));
 
         		if(!$this->sanitize->length($request["name"]))
@@ -7744,7 +7577,7 @@ class Requests_Controller extends MVC_Controller
 				if($this->sanitize->length($request["name"], 15, 2))
 					response(500, __("response_editdevice_nametoolong"));
 
-				if(!$this->sanitize->isInt($request["receive_sms"]) || !$this->sanitize->isInt($request["random_send"]) || !$this->sanitize->isInt($request["random_min"]) || !$this->sanitize->isInt($request["random_max"]) || !$this->sanitize->isInt($request["limit_status"]) || !$this->sanitize->isInt($request["limit_interval"]) || !$this->sanitize->isInt($request["limit_number"]))
+				if(!$this->sanitize->isInt($request["receive_sms"]) || !$this->sanitize->isInt($request["random_send"]) || !$this->sanitize->isInt($request["random_min"]) || !$this->sanitize->isInt($request["random_max"]))
 					response(500, __("response_invalid"));
 
 				if($request["random_max"] < $request["random_min"])
@@ -7777,9 +7610,6 @@ class Requests_Controller extends MVC_Controller
         			"random_send" => $request["random_send"],
         			"random_min" => $request["random_min"],
         			"random_max" => $request["random_max"],
-        			"limit_status" => $request["limit_status"],
-        			"limit_interval" => $request["limit_interval"],
-        			"limit_number" => $request["limit_number"],
         			"packages" => trim($request["packages"])
         		];
 
@@ -7801,15 +7631,15 @@ class Requests_Controller extends MVC_Controller
 
 					$packages = array_map("trim", explode("\n", $request["packages"]));
 
-					$this->fcm->send(md5(logged_id . $device["did"]), [
-				    	"type" => "edit",
-				    	"name" => $filtered["name"],
-				    	"packages" => empty($packages) ? false : implode(",", $packages),
-				    	"receive_sms" => $filtered["receive_sms"],
+					$this->fcm->sendWithToken($device["fcm_token"], [
+						"action" => "device_update",
+						"name" => $filtered["name"],
+						"packages" => empty($packages) ? "" : implode(",", $packages),
+						"receive_sms" => $filtered["receive_sms"],
 						"random_send" => $filtered["random_send"],
 						"random_min" => $filtered["random_min"],
 						"random_max" => $filtered["random_max"]
-				    ]);
+					]);
 
         			response(200, __("response_device_updated"));
         		else:
@@ -8033,6 +7863,14 @@ class Requests_Controller extends MVC_Controller
 					$request["ai_plugins"] = [];
 				endif;
 
+				if(isset($request["group_trigger"])):
+					if(!$this->sanitize->isInt($request["group_trigger"])):
+						response(500, __("response_invalid"));
+					endif;
+				else:
+					$request["group_trigger"] = 2;
+				endif;
+
 				if($request["source"] < 2):
 					// sms
 
@@ -8052,12 +7890,13 @@ class Requests_Controller extends MVC_Controller
 						"match" => $request["match"],
 						"ai_key" => $request["ai_key"],
 						"ai_plugins" => implode(",", $request["ai_plugins"]),
+						"group_trigger" => $request["group_trigger"] < 2 ? 1 : 2,
 						"sim" => $request["sim"] < 2 ? 1 : 2,
 						"device" => $request["device"],
 						"name" => $request["name"],
 						"event" => 0,
 						"priority" => 2,
-						"keywords" => $request["keywords"],
+						"keywords" => $this->sanitize->cleanAutoreplyKeywordCommas($request["keywords"]),
 						"message" => $request["message"],
 						"link" => false
 					];
@@ -8238,12 +8077,13 @@ class Requests_Controller extends MVC_Controller
 						"match" => $request["match"],
 						"ai_key" => $request["ai_key"],
 						"ai_plugins" => implode(",", $request["ai_plugins"]),
+						"group_trigger" => $request["group_trigger"] < 2 ? 1 : 2,
 						"sim" => 0,
 						"account" => $request["account"],
 						"name" => $request["name"],
 						"event" => 0,
 						"priority" => $request["priority"] < 2 ? 1 : 2,
-						"keywords" => $request["keywords"],
+						"keywords" => $this->sanitize->cleanAutoreplyKeywordCommas($request["keywords"]),
 						"message" => json_encode($message),
 						"link" => false
 					];
@@ -8896,300 +8736,6 @@ class Requests_Controller extends MVC_Controller
 				endif;
 
 				break;
-			case "admin.builder":
-				if(!super_admin)
-					response(500, __("response_no_permission"));
-
-				if(!$this->sanitize->length($request["package_name"], 5))
-					response(500, __("response_builder_packagenameshort"));
-
-				if(!$this->sanitize->length($request["app_name"]))
-					response(500, __("response_builder_appnameshort"));
-
-				$request["package_name"] = strtolower($request["package_name"]);
-				$request["apk_version"] = floor($request["apk_version"]);
-				$request["app_layout"] = empty($request["layout"]) ? $this->file->get("system/storage/temporary/device.html") : $request["layout"];
-				$request["app_js"] = $request["script"];
-				$request["app_css"] = $request["css"];
-
-				if(isset($_FILES["google"])):
-					try {
-						$upload = $_FILES["google"];
-						if($upload["error"] === UPLOAD_ERR_OK):
-							$fileExt = pathinfo($upload["name"], PATHINFO_EXTENSION);
-							if(!in_array($fileExt, ["json"]))
-								response(500, __("response_builder_invalidgooglefile"));
-
-							$uploadDir = "system/storage/temporary/";
-							$uploadPath = $uploadDir . "google." . $fileExt;
-
-							if(!move_uploaded_file($upload["tmp_name"], $uploadPath)):
-								response(500, __("response_builder_invalidgooglefile"));
-							endif;
-						endif;
-					} catch(Exception $e) {
-						response(500, __("response_builder_invalidgooglefile"));
-					}
-				endif;
-
-				if(isset($_FILES["firebase"])):
-					try {
-						$upload = $_FILES["firebase"];
-						if($upload["error"] === UPLOAD_ERR_OK):
-							$fileExt = pathinfo($upload["name"], PATHINFO_EXTENSION);
-							if(!in_array($fileExt, ["json"]))
-								response(500, __("response_builder_invalidfirebasefile"));
-
-							$uploadDir = "system/storage/temporary/";
-							$uploadPath = $uploadDir . "firebase." . $fileExt;
-
-							if(!move_uploaded_file($upload["tmp_name"], $uploadPath)):
-								response(500, __("response_builder_invalidfirebasefile"));
-							endif;
-						endif;
-					} catch(Exception $e) {
-						response(500, __("response_builder_invalidfirebasefile"));
-					}
-				endif;
-
-	            if(isset($_FILES["app_logo"])):
-        			$this->upload->upload($_FILES["app_logo"]);
-        			if($this->upload->uploaded):
-        				if(!in_array($this->upload->file_src_name_ext, ["png"]))
-    						response(500, __("response_builder_applogofail"));
-
-        				$this->upload->allowed = [
-        					"image/*"
-        				];
-		                $this->upload->file_new_name_body = "logo";
-		                $this->upload->file_overwrite = true;
-		                $this->upload->process("uploads/builder/");
-
-						if($this->upload->processed):
-							$this->upload->clean();
-
-							try {
-								$imgbb = json_decode($this->guzzle->post("https://imgbb.com/json", [
-									"multipart" => [
-								        [
-								            "name" => "type",
-								            "contents" => "file"
-								        ],
-								        [
-								            "name" => "action",
-								            "contents" => "upload"
-								        ],
-								        [
-								            "name" => "timestamp",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "auth_token",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "source",
-								            "contents" => fopen("uploads/builder/logo.png", "r"),
-								            "filename" => "logo.png"
-								        ]
-								    ],
-						            "allow_redirects" => true,
-						            "http_errors" => false
-						        ])->getBody()->getContents(), true);
-
-								$request["app_logo_remote"] = $imgbb["image"]["url"];
-							} catch(Exception $e){
-								// Ignore
-							}
-						else:
-							response(500, __("response_builder_applogofail"));
-						endif;
-					endif;
-	            endif;
-
-	            if(isset($_FILES["app_logo_login"])):
-        			$this->upload->upload($_FILES["app_logo_login"]);
-        			if($this->upload->uploaded):
-        				if(!in_array($this->upload->file_src_name_ext, ["png"]))
-    						response(500, __("response_builder_applogofail"));
-
-        				$this->upload->allowed = [
-        					"image/*"
-        				];
-		                $this->upload->file_new_name_body = "logo-login";
-		                $this->upload->file_overwrite = true;
-		                $this->upload->process("uploads/builder/");
-
-						if($this->upload->processed):
-							$this->upload->clean();
-
-							try {
-								$imgbb = json_decode($this->guzzle->post("https://imgbb.com/json", [
-									"multipart" => [
-								        [
-								            "name" => "type",
-								            "contents" => "file"
-								        ],
-								        [
-								            "name" => "action",
-								            "contents" => "upload"
-								        ],
-								        [
-								            "name" => "timestamp",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "auth_token",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "source",
-								            "contents" => fopen("uploads/builder/logo-login.png", "r"),
-								            "filename" => "logo-login.png"
-								        ]
-								    ],
-						            "allow_redirects" => true,
-						            "http_errors" => false
-						        ])->getBody()->getContents(), true);
-
-								$request["app_loginlogo_remote"] = $imgbb["image"]["url"];
-							} catch(Exception $e){
-								// Ignore
-							}
-						else:
-							response(500, __("response_builder_applogofail"));
-						endif;
-					endif;
-	            endif;
-
-	            if(isset($_FILES["app_icon"])):
-        			$this->upload->upload($_FILES["app_icon"]);
-        			if($this->upload->uploaded):
-        				if(!in_array($this->upload->file_src_name_ext, ["png"]))
-    						response(500, __("response_builder_appiconfail"));
-
-        				$this->upload->allowed = [
-        					"image/*"
-        				];
-		                $this->upload->file_new_name_body = "icon";
-		                $this->upload->file_overwrite = true;
-		                $this->upload->image_min_width = 1024;
-		                $this->upload->image_min_height = 1024;
-		                $this->upload->image_max_width = 1024;
-		                $this->upload->image_max_height = 1024;
-		                $this->upload->process("uploads/builder/");
-
-						if($this->upload->processed):
-							$this->upload->clean();
-
-							try {
-								$imgbb = json_decode($this->guzzle->post("https://imgbb.com/json", [
-									"multipart" => [
-								        [
-								            "name" => "type",
-								            "contents" => "file"
-								        ],
-								        [
-								            "name" => "action",
-								            "contents" => "upload"
-								        ],
-								        [
-								            "name" => "timestamp",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "auth_token",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "source",
-								            "contents" => fopen("uploads/builder/icon.png", "r"),
-								            "filename" => "icon.png"
-								        ]
-								    ],
-						            "allow_redirects" => true,
-						            "http_errors" => false
-						        ])->getBody()->getContents(), true);
-
-								$request["app_icon_remote"] = $imgbb["image"]["url"];
-							} catch(Exception $e){
-								// Ignore
-							}
-						else:
-							response(500, __("response_builder_appiconfail"));
-						endif;
-					endif;
-	            endif;
-
-	            if(isset($_FILES["app_splash"])):
-        			$this->upload->upload($_FILES["app_splash"]);
-        			if($this->upload->uploaded):
-        				if(!in_array($this->upload->file_src_name_ext, ["png"]))
-    						response(500, __("response_builder_appsplashfail"));
-
-        				$this->upload->allowed = [
-        					"image/*"
-        				];
-		                $this->upload->file_new_name_body = "splash";
-		                $this->upload->file_overwrite = true;
-		                $this->upload->image_min_width = 2732;
-		                $this->upload->image_min_height = 2732;
-		                $this->upload->image_max_width = 2732;
-		                $this->upload->image_max_height = 2732;
-		                $this->upload->process("uploads/builder/");
-
-						if($this->upload->processed):
-							$this->upload->clean();
-
-							try {
-								$imgbb = json_decode($this->guzzle->post("https://imgbb.com/json", [
-									"multipart" => [
-								        [
-								            "name" => "type",
-								            "contents" => "file"
-								        ],
-								        [
-								            "name" => "action",
-								            "contents" => "upload"
-								        ],
-								        [
-								            "name" => "timestamp",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "auth_token",
-								            "contents" => time()
-								        ],
-								        [
-								            "name" => "source",
-								            "contents" => fopen("uploads/builder/splash.png", "r"),
-								            "filename" => "splash.png"
-								        ]
-								    ],
-						            "allow_redirects" => true,
-						            "http_errors" => false
-						        ])->getBody()->getContents(), true);
-
-								$request["app_splash_remote"] = $imgbb["image"]["url"];
-							} catch(Exception $e){
-								// Ignore
-							}
-						else:
-							response(500, __("response_builder_appsplashfail"));
-						endif;
-					endif;
-	            endif;
-
-	            foreach($request as $key => $value):
-            		$this->system->settings($key, $value);
-	            endforeach;
-
-	            $this->cache->container("system.settings");
-	            $this->cache->clear();
-
-    			response(200, __("response_builder_settingsupdated"));
-
-				break;
 			case "admin.theme":
 				if(!super_admin)
 					response(500, __("response_no_permission"));
@@ -9331,6 +8877,62 @@ JAVASCRIPT;
     			response(301, __("response_theme_updated"));
 
 				break;
+			case "admin.gateway":
+				if(!super_admin)
+					response(500, __("response_no_permission"));
+
+				if(isset($_FILES["apk_file"])):
+					try {
+						$upload = $_FILES["apk_file"];
+						if($upload["error"] === UPLOAD_ERR_OK):
+							$fileExt = pathinfo($upload["name"], PATHINFO_EXTENSION);
+							if(!in_array($fileExt, ["apk"]))
+								response(500, __("response_admin_gateway_invalidapkfile"));
+
+							if(!preg_match('/_v(\d+\.\d+\.\d+)\.apk$/', $upload["name"], $matches))
+								response(500, __("response_admin_gateway_invalidapkfilename"));
+
+							$version = $matches[1];
+							$uploadDir = "uploads/builder/";
+							$uploadPath = $uploadDir . "gateway.apk";
+
+							if(!move_uploaded_file($upload["tmp_name"], $uploadPath)):
+								response(500, __("response_admin_gateway_faileduploadapk"));
+							endif;
+
+							$this->system->settings("apk_version", $version);
+						endif;
+					} catch(Exception $e) {
+						response(500, __("response_admin_gateway_faileduploadapk"));
+					}
+				endif;
+
+				if(isset($_FILES["firebase"])):
+					try {
+						$upload = $_FILES["firebase"];
+						if($upload["error"] === UPLOAD_ERR_OK):
+							$fileExt = pathinfo($upload["name"], PATHINFO_EXTENSION);
+							if(!in_array($fileExt, ["json"]))
+								response(500, __("response_builder_invalidfirebasefile"));
+
+							$uploadDir = "system/storage/temporary/";
+							$uploadPath = $uploadDir . "firebase." . $fileExt;
+
+							if(!move_uploaded_file($upload["tmp_name"], $uploadPath)):
+								response(500, __("response_builder_invalidfirebasefile"));
+							endif;
+						endif;
+					} catch(Exception $e) {
+						response(500, __("response_builder_invalidfirebasefile"));
+					}
+				endif;
+
+				$this->cache->container("system.settings");
+				$this->cache->clear();
+
+				response(301, __("response_admin_gateway_updatesuccess"));
+
+				break;
 			case "admin.settings":
 				if(!super_admin)
 					response(500, __("response_no_permission"));
@@ -9451,14 +9053,17 @@ JAVASCRIPT;
 			case "sent":
 				$sent = $this->system->getSent($id);
 
+				$device = $this->system->getDevice(logged_id, $sent["did"], "did");
+
 				if($this->system->delete(logged_id, $id, "sent")):
 					try {
 						if($sent["status"] < 3):
-							
-								$this->fcm->send(md5(logged_id . $sent["did"]), [
-									"type" => "sms_delete",
-									"id" => $id
+							if($device):
+								$this->fcm->sendWithToken($device["fcm_token"], [
+									"action" => "message_delete",
+									"message_id" => $id
 								]);
+							endif;
 						endif;
 					} catch(Exception $e){
 						// Ignore
@@ -9474,11 +9079,15 @@ JAVASCRIPT;
 
 				break;
 			case "sms.campaign":
+				$campaign = $this->system->getSmsCampaign(logged_id, $id);
+				
 				if($this->system->delete(logged_id, $id, "campaigns")):
 					if($this->system->clearCampaignSms(logged_id, $id)):
-						$this->fcm->send($this->hash->encode(logged_id, system_token), [
-							"type" => "sms_campaign_delete",
-							"cid" => $id
+						$device = $this->system->getDevice(logged_id, $campaign["did"], "did");
+
+						$this->fcm->sendWithToken($device["fcm_token"], [
+							"action" => "campaign_delete",
+							"campaign_id" => $id
 						]);
 					endif;
 
@@ -9528,7 +9137,18 @@ JAVASCRIPT;
 
 				break;
 			case "ussd":
+				$ussdCode = $this->system->getUssd($id, logged_id);
+
 				if($this->system->delete(logged_id, $id, "ussd")):
+					$device = $this->system->getDevice(logged_id, $ussdCode["did"], "did");
+
+					if($device):
+						$this->fcm->sendWithToken($device["fcm_token"], [
+							"action" => "ussd_delete",
+							"ussd_id" => $id
+						]);
+					endif;
+
 					$vars = [
 						"message" => __("response_ussddelete_success"),
 						"table" => "android.ussd"
@@ -9824,9 +9444,8 @@ JAVASCRIPT;
 					$this->cache->container("user." . logged_hash);
 					$this->cache->clear();
 
-					$this->fcm->send(md5(logged_id . $device["did"]), [
-				    	"type" => "unlink",
-				    	"device_unique" => $device["did"]
+					$this->fcm->sendWithToken($device["fcm_token"], [
+				    	"action" => "device_delete"
 				    ]);
 
 					$vars = [

@@ -27,6 +27,7 @@
                         <option value="openai" selected>OpenAI ({__("form_addaikey_providerrecommended")})</option>
                         <option value="geminiai">GeminiAI</option>
                         <option value="claudeai">ClaudeAI</option>
+                        <option value="deepseekai">DeepSeekAI</option>
                     </select>
                 </div>
 
@@ -44,17 +45,7 @@
                     <textarea name="post_prompt" rows="5" class="form-control" placeholder="{__("form_addaikey_postprompt_placeholder")}"></textarea>
                 </div>
 
-                <div class="form-group col-12">
-                    <label>
-                        {__("form_addaikey_groupreply")} <i class="la la-info-circle" title="{__("form_addaikey_groupreply_desc")}"></i>
-                    </label>
-                    <select name="group_reply" class="form-control">
-                        <option value="1">{__("form_enable")}</option>
-                        <option value="2" selected>{__("form_disable")}</option>
-                    </select>
-                </div>
-
-                <div class="form-group col-12">
+                <div class="form-group col-12" system-vision-ai>
                     <label>
                         {__("form_addaikey_vision_title")} <i class="la la-info-circle" title="{__("form_addaikey_vision_desc")}"></i>
                     </label>
@@ -103,6 +94,15 @@
                     <select name="model_claudeai" class="form-control">
                         <option value="claude-3-5-sonnet-latest" data-content="claude-3-5-sonnet-latest <span class='badge badge-success'>{__("form_addaikey_modelsmartest")}</span>">claude-3-5-sonnet-latest ({__("form_addaikey_modelsmartest")})</option>
                         <option value="claude-3-5-haiku-latest" data-content="claude-3-5-haiku-latest <span class='badge badge-warning'>{__("form_addaikey_modelcheapest")}</span> <span class='badge badge-danger'>{__("form_aikey_provider_visionoff")}</span>" selected>claude-3-5-haiku-latest ({__("form_addaikey_modelcheapest")}) ({__("form_aikey_provider_visionoff")})</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-12" system-models-deepseekai>
+                    <label>
+                        {__("form_addaikey_model_title")} <i class="la la-info-circle" title="{__("form_addaikey_model_desc")}"></i>
+                    </label>
+                    <select name="model_deepseekai" class="form-control">
+                        <option value="deepseek-chat" data-content="deepseek-chat <span class='badge badge-danger'>{__("form_addaikey_visonunsupported")}</span>">deepseek-chat ({__("form_addaikey_visonunsupported")})</option>
                     </select>
                 </div>
 

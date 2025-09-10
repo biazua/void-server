@@ -107,7 +107,7 @@ SQL;
     public function getActions($uid, $type)
     {
         $query = <<<SQL
-SELECT a.id, a.type, a.source, a.`event`, a.priority, a.`match`, a.ai_key, k.id AS ai_key_id, k.prompt AS ai_prompt, k.provider AS `provider`, k.post_prompt AS ai_post_prompt, k.model AS ai_model, k.history AS ai_history, k.group_reply AS ai_group_reply, k.max_tokens AS ai_max_tokens, k.vision AS ai_vision, k.transcription AS ai_transcription, k.apikey AS ai_apikey, a.ai_plugins, a.account, a.keywords, a.link, a.message
+SELECT a.id, a.type, a.source, a.`event`, a.priority, a.`match`, a.ai_key, a.group_trigger, k.id AS ai_key_id, k.prompt AS ai_prompt, k.provider AS `provider`, k.post_prompt AS ai_post_prompt, k.model AS ai_model, k.history AS ai_history, k.max_tokens AS ai_max_tokens, k.vision AS ai_vision, k.transcription AS ai_transcription, k.apikey AS ai_apikey, a.ai_plugins, a.account, a.keywords, a.link, a.message
 FROM actions a
 LEFT JOIN ai_keys k ON a.ai_key = k.id
 WHERE a.uid = ? AND a.type = ? AND a.source > 1

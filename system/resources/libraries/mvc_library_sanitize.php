@@ -2,19 +2,6 @@
 
 class MVC_Library_Sanitize
 {
-	public function request()
-	{
-        $rawPayload = file_get_contents("php://input");
-
-		try {
-			$request = !empty($rawPayload) ? $this->array(json_decode($rawPayload, true)) : $this->array($_REQUEST);
-		} catch (Exception $e) {
-			$request = $this->array($_REQUEST);
-		}
-        
-		return $request;
-	}
-
 	public function array($request, $exclude = [])
 	{
 		$sanitized = []; 
@@ -36,16 +23,53 @@ class MVC_Library_Sanitize
 		return $sanitized;
 	}
 
+	public function json()
+	{
+		try {
+			$requestData = file_get_contents('php://input');
+			$data = json_decode($requestData, true);
+
+			$sanitized = []; 
+
+			foreach ($data as $key => $value):
+				if(!is_array($value)):
+					if($this->isEmail($value)):
+						$sanitized[$key] = trim($this->email($value));
+					elseif($this->isUrl($value)):
+						$sanitized[$key] = trim($this->url($value));
+					else:
+						$sanitized[$key] = trim($this->string($value));
+					endif;
+				else:
+					$sanitized[$key] = $value;
+				endif;
+			endforeach;
+		} catch (Exception $e) {
+			return [];
+		}
+
+		return $sanitized;
+	}
+
+	public function normalizeContactsCommas($input)
+	{
+		return implode(',', array_filter(array_map('trim', preg_split('/\s+/', trim($input)))));
+	}
+
+	public function cleanAutoreplyKeywordCommas($input) {
+		return implode(',', array_filter(explode(',', trim(preg_replace('/,+/', ',', $input), ','))));
+	}
+
 	public function length($requests, $limit = 3, $type = 1)
 	{
 		if($type < 2):
 			if(is_array($requests)):
 				foreach($requests as $request):
-					if(strlen($request) < ($limit + 1))
+					if(strlen($request) < ($limit))
 						return false;
 				endforeach;
 			else:
-				if(strlen($requests) < ($limit + 1))
+				if(strlen($requests) < ($limit))
 					return false;
 			endif;
 
@@ -53,11 +77,11 @@ class MVC_Library_Sanitize
 		else:
 			if(is_array($requests)):
 				foreach($requests as $request):
-					if(strlen($request) > ($limit + 1))
+					if(strlen($request) > ($limit))
 						return true;
 				endforeach;
 			else:
-				if(strlen($requests) > ($limit + 1))
+				if(strlen($requests) > ($limit))
 					return true;
 			endif;
 

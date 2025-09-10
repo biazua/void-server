@@ -2980,3 +2980,94 @@ form_addaikey_groupreply_desc === If enabled, the AI will respond to received me
 form_addaikey_providerrecommended === Recommended
 form_addaikey_maxtokens === Max Tokens
 form_addaikey_maxtokens_desc === Enter the maximum tokens the AI is allowed to use.
+table_androidver_15 === Android 15
+form_addautoreply_grouptrigger === Group Trigger
+form_addautoreply_grouptrigger_desc === If enabled, this autoreply will be triggered by messages received from whatsapp groups.
+form_addaikey_visonunsupported === Vision Unsupported
+form_addaikey_pluginsunsupported === Plugins Unsupported
+ai_menu_title_aikeys === AI Keys
+device_api_messagesent === Message _8880_ has been sent!
+device_api_messagedelivered === Message _8880_ has been delivered!
+device_api_messagepending === Delivery of message _8880_ is pending!
+device_api_messagedeliveryfailed === Failed delivery of message _8880_ from _8881_!
+device_api_messagefailed === Failed to send message _8880_ from _8881_!
+admin_gateway_form_title === Android Gateway Settings
+admin_gateway_formapktitle === APK File
+admin_gateway_formapkdesc === Upload the APK file you downloaded from the customer dashboard. Please do not rename the file.
+table_androidver_16 === Android 16
+and_doc_webhook_intro_title === Introduction
+and_doc_webhook_intro_line1 === Webhooks are a powerful feature that let your server listen for events from your devices or WhatsApp. This helps you automate tasks.
+and_doc_webhook_intro_line2 === This feature only works for incoming events like SMS, WhatsApp messages, USSD responses, and Android notifications.
+and_doc_webhook_usecases_title === Use Cases
+and_doc_webhook_usecase1 === Auto-reply bot for SMS and WhatsApp.
+and_doc_webhook_usecase2 === Save messages and chats to your database.
+and_doc_webhook_usecase3 === Save notifications to your database.
+and_doc_webhook_usecase4 === Save USSD replies to your database.
+and_doc_webhook_usecase5 === Send payloads to email addresses.
+and_doc_webhook_usecase6 === Send an SMS or chat when you get a Facebook notification.
+and_doc_webhook_usecase7 === Run actions when a notification is received from any app.
+and_doc_webhook_how_title === How It Works
+and_doc_webhook_how_line1 === When an event is received, the system sends it to your webhook URL using the POST method. Your server can then handle the payload however you want.
+and_doc_webhook_flow_image_alt === Webhook Flow
+and_doc_webhook_payload_title === Payload Structure
+and_doc_webhook_payload_line1 === Each payload has a type and data. You just need to check the type and process the data.
+and_doc_webhook_payload_sms === SMS
+and_doc_webhook_payload_whatsapp === WhatsApp
+and_doc_webhook_payload_ussd === USSD
+and_doc_webhook_payload_notification === Notification
+and_doc_webhook_code_title === Code Example
+and_doc_actions_intro_title === Introduction
+and_doc_actions_intro_line1 === Actions are tools that help automate tasks like listening for send/receive events or automatically replying to messages.
+and_doc_actions_intro_line2 === They are designed specifically for SMS and WhatsApp related automation.
+and_doc_actions_types_title === Types of Actions
+and_doc_actions_type_hooks === Hooks
+and_doc_actions_type_hooks_desc === Hooks listen for SMS/WhatsApp send and receive events. Unlike webhooks, they also support send events and use the GET method. You can structure the URL yourself.
+and_doc_actions_type_autoreplies === Autoreplies
+and_doc_actions_type_autoreplies_desc === Autoreplies automatically respond to incoming messages when a keyword is detected. You set the keywords and the response message.
+and_doc_actions_usecases_title === Use Cases
+and_doc_actions_usecase1 === Log events to your server when you send or receive a message.
+and_doc_actions_usecase2 === Call a remote URL on message send/receive.
+and_doc_actions_usecase3 === Automatically reply if a keyword is found in a message.
+and_doc_actions_how_title === How It Works
+and_doc_actions_how_line1 === The images below explain how hooks and autoreplies work.
+and_doc_actions_flow_hooks === Hooks
+and_doc_actions_flow_hooks_alt === Flow diagram for Hooks
+and_doc_actions_flow_autoreplies === Autoreplies
+and_doc_actions_flow_autoreplies_alt === Flow diagram for Autoreplies
+and_doc_actions_code_title === Code Example for Hooks
+and_doc_android_intro_title === Introduction
+and_doc_android_intro_line1 === To send and receive SMS messages, you need to link Android devices with SIM card support. Sending SMS requires carrier balance.
+and_doc_android_versions_title === Android Support
+and_doc_android_versions_line1 === The gateway app supports the following Android versions:
+and_doc_android_version_oreo === Android Oreo
+and_doc_android_version_pie === Android Pie
+and_doc_android_version_10 === Android 10
+and_doc_android_version_11 === Android 11
+and_doc_android_version_12 === Android 12
+and_doc_android_version_13 === Android 13
+and_doc_android_version_14 === Android 14
+and_doc_android_version_15 === Android 15
+and_doc_android_receive_title === Receiving SMS
+and_doc_android_receive_line1 === You can disable SMS receiving from a device if it is only used for sending.
+and_doc_android_receive_line2 === Note: this will also disable receive-related features such as webhooks.
+and_doc_android_interval_title === Send Interval
+and_doc_android_interval_line1 === Use this to avoid SMS spam issues. Messages will send at random intervals based on the min and max seconds you define.
+and_doc_android_notifications_title === Notifications
+and_doc_android_notifications_line1 === The platform can listen to Android notifications and help automate tasks.
+and_doc_android_notifications_line2 === Set app package names in the APPLICATIONS field of the device. Use line breaks to separate each package.
+and_doc_android_partner_title === Partner Settings
+and_doc_android_partner_line1 === Partners can access special device settings including global device access and rate controls.
+and_doc_partner_intro_title === Introduction
+and_doc_partner_intro_line1 === Our partnership system lets you earn by sharing your devices with other users to send messages on your local network.
+and_doc_partner_intro_line2 === You control your partner devices completely. You can enable both SIM cards and set random send intervals.
+and_doc_partner_earning_title === Earnings Potential
+and_doc_partner_earning_case1 === A user from country X wants to send messages to your country Y. If your device is partnered, they can send local messages using your device at a lower cost.
+and_doc_partner_earning_case2 === A user in your own country can also use your partnered device if they don’t have one.
+and_doc_partner_how_title === How does it work?
+and_doc_partner_how_alt === Diagram showing how the partner system works
+and_doc_partner_apply_title === How to apply?
+and_doc_partner_apply_line1 === If you're interested in becoming a partner, please contact us so we can upgrade your account.
+response_admin_gateway_faileduploadapk === Failed to upload APK file!
+response_admin_gateway_invalidapkfilename === APK filename must contain version (e.g. com.packagename.test_v3.9.4.apk)
+response_admin_gateway_invalidapkfile === Invalid APK file!
+response_admin_gateway_updatesuccess === Gateway app updated successfully!

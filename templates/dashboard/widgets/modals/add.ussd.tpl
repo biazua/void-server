@@ -35,7 +35,7 @@
                     </label>
                     <select name="device" class="form-control" data-live-search="true">
                         {foreach $data.devices as $device}
-                        <option value="{$device@key}" data-tokens="{$device.token}" data-content="{$device.name} <span class='badge badge-{if $device.status < 2}success{else}danger{/if} device-status-{$device.id}'>{if $device.status < 2}{__("form_status_online")}{else}{__("form_status_offline")}{/if}</span>" {if $device@index < 1}selected{/if}>{$device.name}</option>
+                        <option value="{$device@key}" data-tokens="{$device.token}" data-content="{$device.name}" {if $device@index < 1}selected{/if}>{$device.name}</option>
                         {/foreach}
                     </select>
                 </div>

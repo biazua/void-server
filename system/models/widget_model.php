@@ -66,7 +66,7 @@ SQL;
 
     public function getAiKey($id)
     {
-        return $this->db->query_one("SELECT id, uid, name, prompt, post_prompt, model, history, group_reply, max_tokens, vision, transcription, apikey, `provider` FROM ai_keys WHERE id = ?", [
+        return $this->db->query_one("SELECT id, uid, name, prompt, post_prompt, model, history, max_tokens, vision, transcription, apikey, `provider` FROM ai_keys WHERE id = ?", [
             $id
         ]);
     }
@@ -111,7 +111,7 @@ SQL;
 
     public function getDevice($id)
     {
-        return $this->db->query_one("SELECT id, name, version, random_send, random_min, random_max, limit_status, limit_interval, limit_number, packages, receive_sms, global_device, global_priority, global_slots, country, rate FROM devices WHERE id = ?", [
+        return $this->db->query_one("SELECT id, name, version, random_send, random_min, random_max, packages, receive_sms, global_device, global_priority, global_slots, country, rate FROM devices WHERE id = ?", [
             $id
         ]);
     }
@@ -140,7 +140,7 @@ SQL;
 
     public function getAction($uid, $id)
     {
-        return $this->db->query_one("SELECT id, uid, type, source, event, priority, `match`, ai_key, ai_plugins, sim, device, account, name, keywords, link, message, create_date FROM actions WHERE uid = ? AND id = ?", [
+        return $this->db->query_one("SELECT id, uid, type, source, event, priority, `match`, ai_key, ai_plugins, group_trigger, sim, device, account, name, keywords, link, message, create_date FROM actions WHERE uid = ? AND id = ?", [
             $uid,
             $id
         ]);
@@ -276,11 +276,11 @@ SQL;
     {
         if($ussd):
             $query = <<<SQL
-SELECT id, uid, did, name, online_id, online_status FROM devices WHERE uid = ? AND ROUND(version) >= 8
+SELECT id, uid, did, name FROM devices WHERE uid = ? AND ROUND(version) >= 8
 SQL;
         else:
             $query = <<<SQL
-SELECT id, uid, did, name, online_id, online_status FROM devices WHERE uid = ?
+SELECT id, uid, did, name FROM devices WHERE uid = ?
 SQL;
         endif;
 
@@ -295,8 +295,6 @@ SQL;
                     "uid" => $row["uid"],
                     "global" => false,
                     "name" => $row["name"],
-                    "online_id" => $row["online_id"],
-                    "status" => $row["online_status"],
                     "token" => strtolower($row["name"])
                 ];
 
@@ -309,7 +307,7 @@ SQL;
     public function getGlobalDevices($uid)
     {
         $query = <<<SQL
-SELECT d.id AS id, d.uid AS uid, d.did AS did, d.name AS name, d.country AS country, d.rate AS rate, d.online_id AS online_id, d.online_status AS online_status, u.email AS owner
+SELECT d.id AS id, d.uid AS uid, d.did AS did, d.name AS name, d.country AS country, d.rate AS rate, u.email AS owner
 FROM devices d
 LEFT JOIN users u ON d.uid = u.id 
 WHERE d.uid != ? AND d.global_device < 2
@@ -329,8 +327,6 @@ SQL;
                     "rate" => $row["rate"],
                     "name" => $row["name"],
                     "owner" => $row["owner"],
-                    "online_id" => $row["online_id"],
-                    "status" => $row["online_status"],
                     "token" => strtolower($row["name"])
                 ];
 
@@ -369,7 +365,7 @@ SQL;
     public function getAiKeys($uid)
 	{
 		$query = <<<SQL
-SELECT id, uid, name, prompt, post_prompt, model, history, group_reply, max_tokens, vision, apikey, `provider` FROM `ai_keys` WHERE uid = ?
+SELECT id, uid, name, prompt, post_prompt, model, history, max_tokens, vision, apikey, `provider` FROM `ai_keys` WHERE uid = ?
 SQL;
 
 		$this->db->query($query, [

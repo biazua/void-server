@@ -58,17 +58,13 @@
                         </h4>
 
                         <h4 class="text-uppercase">
-                            {__("administration_landing_build")}: <span class="badge badge-success text-lowercase">v{__s("system_apk_version")}</span>
+                            {__("and_admin_build_line49")}: <span class="badge badge-success text-lowercase">v{__s("system_apk_version")}</span>
                         </h4>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn btn-primary btn-sm lift mb-2 mb-lg-0" system-build>
-                            <i class="la la-hammer la-lg"></i> {__("dashboard_btn_build")}
-                        </button>
-
-                        <button class="btn btn-primary btn-sm lift mb-2 mb-lg-0" system-toggle="admin.builder">
-                            <i class="la la-tools la-lg"></i> {__("dashboard_btn_buildsettings")}
+                        <button class="btn btn-primary btn-sm lift mb-2 mb-lg-0" system-toggle="admin.gateway">
+                            <i class="la la-android la-lg"></i> {__("dashboard_btn_buildsettings")}
                         </button>
                     </div>
                 </div>

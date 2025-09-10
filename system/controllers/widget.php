@@ -563,6 +563,8 @@ class Widget_Controller extends MVC_Controller
 						$phoneSample = "+639123456789";
 					}
 
+					$scheduled["numbers"] = str_replace(",", "\n", $scheduled["numbers"]);
+
 					$vars = [
 						"template" => [
 							"title" => __("widget_editscheduled_title"),
@@ -612,8 +614,7 @@ class Widget_Controller extends MVC_Controller
 						"template" => [
 							"title" => __("modal_adddevice_title"),
 							"data" => [
-								"hash" => $this->hash->encode(logged_id, system_token),
-								"apk_url" => site_url("uploads/builder/" . system_package_name . ".apk", true)
+								"hash" => $this->hash->encode(logged_id, system_token)
 							]
 						],
 						"handler" => [
@@ -801,6 +802,8 @@ class Widget_Controller extends MVC_Controller
 					$decodeMessage = json_decode($scheduled["message"], true);
 
 					$scheduled["message"] = decodeBraces(isset($decodeMessage["text"]) ? $decodeMessage["text"] : $decodeMessage["caption"]);
+
+					$scheduled["numbers"] = str_replace(",", "\n", $scheduled["numbers"]);
 
 					$vars = [
 						"template" => [
@@ -1482,33 +1485,23 @@ class Widget_Controller extends MVC_Controller
 					];
 					
 					break;
-				case "admin.builder":
+				case "admin.gateway":
 					if(!super_admin)
 						response(500, __("response_no_permission"));
 
 					$vars = [
 						"template" => [
-							"title" => __("modal_buildersettings_title"),
+							"title" => __("admin_gateway_form_title"),
 							"data" => [
-								"builder" => $this->system->getSettings(),
-								"assets" => [
-									"logo" => $this->file->exists("uploads/builder/logo.png"),
-									"logo_login" => $this->file->exists("uploads/builder/logo-login.png"),
-									"icon" => $this->file->exists("uploads/builder/icon.png"),
-									"splash" => $this->file->exists("uploads/builder/splash.png"),
-									"google" => $this->file->exists("system/storage/temporary/google.json"),
-									"firebase" => $this->file->exists("system/storage/temporary/firebase.json")
-								],
-								"layout" => empty(system_app_layout) ? $this->file->get("system/storage/temporary/device.html") : system_app_layout
+								"firebase" => $this->file->exists("system/storage/temporary/firebase.json")
 							]
 						],
 						"handler" => [
 							"id" => 1,
 							"tpl" => $tpl,
-							"size" => "lg",
+							"size" => "md",
 							"type" => "update",
-							"loader" => __("widgets_adminbuilder_loader"),
-							"require" => "package_name|{$GLOBALS["__"]("require_packagename")}<=>app_name|{$GLOBALS["__"]("require_appname")}<=>app_color|{$GLOBALS["__"]("require_appcolor")}"
+							"loader" => __("widgets_adminbuilder_loader")
 						]
 					];
 					

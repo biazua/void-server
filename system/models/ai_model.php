@@ -37,4 +37,11 @@ SQL;
             return [];
         endif;
     }
+
+    public function getAiKey($id)
+    {
+        return $this->db->query_one("SELECT id, `provider` FROM ai_keys WHERE id = ?", [
+            $id
+        ]);
+    }
 }

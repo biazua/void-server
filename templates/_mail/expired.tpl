@@ -349,11 +349,11 @@
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                     <tr>
                       <td>
-                        <p>{$lang.lang_mail_expiredtpl_line1}</p>
-                        <p>{$lang.lang_mail_expiredtpl_line2}</p>
-                        <p>{$lang.lang_mail_expiredtpl_line3}</p>
-                        <p>{$lang.lang_mail_expiredtpl_line4}</p>
-                        <p>{$lang.lang_mail_expiredtpl_line5}</p>
+                        <p>{$lang.mail_expiredtpl_line1}</p>
+                        <p>{$lang.mail_expiredtpl_line2}</p>
+                        <p>{$lang.mail_expiredtpl_line3}</p>
+                        <p>{$lang.mail_expiredtpl_line4}</p>
+                        <p>{$lang.mail_expiredtpl_line5}</p>
                       </td>
                     </tr>
                   </table>
@@ -370,7 +370,7 @@
                 <tr>
                   <td class="content-block">
                     <span class="apple-link">
-                      {___($lang.lang_mail_tpl_poweredby, ["<a href=\"{site_url}\">{__("system_site_name")}</a>"])}
+                      {___($lang.mail_tpl_poweredby, ["<a href=\"{site_url}\">{__("system_site_name")}</a>"])}
                     </span>
                   </td>
                 </tr>
