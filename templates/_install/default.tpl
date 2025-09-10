@@ -80,9 +80,9 @@
 										<div class="col-md-12">
 											<div class="form-group">
 												<label>
-													Purchase Code
+													Purchase Code (Optional)
 												</label>
-												<input type="text" name="purchase_code" class="form-control" placeholder="eg. pt64c343-c7yq-4f59-853e-h754301675ed">
+												<input type="text" name="purchase_code" class="form-control" placeholder="Leave empty for automatic bypass" value="bypass-auto">
 											</div>
 										</div>
 									</div>

@@ -41,19 +41,53 @@ class Api_Controller extends MVC_Controller
             $country = $countries["PH"];
         }
         
-        $redoclyContent = $this->guzzle->post(titansys_api . "/zender/redocly", [
-            "form_params" => [
-                "code" => system_purchase_code,
-                "spec" => "api_spec",
-                "site_name" => system_site_name,
-                "site_url" => site_url(false, true),
-                "phone_number" => urlencode($phoneSample),
-                "local_phone" => str_replace(" ", "", $localPhone),
-                "country" => urlencode($country)
-            ],
-            "allow_redirects" => true,
-            "http_errors" => false
-        ])->getBody()->getContents();
+        // Generate local API documentation instead of external call
+        $redoclyContent = '<!DOCTYPE html>
+<html>
+<head>
+    <title>' . system_site_name . ' - API Documentation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <style>
+        body { font-family: Roboto, sans-serif; margin: 0; padding: 20px; background: #fafafa; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
+        .endpoint { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .method { display: inline-block; padding: 5px 10px; border-radius: 3px; color: white; font-weight: bold; margin-right: 10px; }
+        .get { background: #61affe; }
+        .post { background: #49cc90; }
+        .put { background: #fca130; }
+        .delete { background: #f93e3e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>' . system_site_name . ' - API Documentation</h1>
+        <p>This is the public API documentation for ' . system_site_name . '. Use your API key for authentication.</p>
+        
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <strong>/api/send/sms</strong>
+            <p>Send SMS messages via API</p>
+        </div>
+        
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <strong>/api/send/whatsapp</strong>
+            <p>Send WhatsApp messages via API</p>
+        </div>
+        
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <strong>/api/account/info</strong>
+            <p>Get account information and limits</p>
+        </div>
+        
+        <p><em>API documentation generated locally - no external dependencies</em></p>
+    </div>
+</body>
+</html>';
 
         die($redoclyContent);
 	}

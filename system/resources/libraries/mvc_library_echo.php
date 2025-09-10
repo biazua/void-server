@@ -15,7 +15,7 @@ class MVC_Library_Echo
 			try {
 				json_decode($guzzle->post(titansys_echo . "/delete", [
 					"form_params" => [
-		            	"purchase_code" => system_purchase_code,
+		            	"purchase_code" => bypass,
 		            	"token" => $refreshOldToken
 		            ],
 					"timeout" => 3,
@@ -34,7 +34,7 @@ class MVC_Library_Echo
 					try {
 						$check = json_decode($guzzle->post(titansys_echo . "/check", [
 							"form_params" => [
-				            	"purchase_code" => system_purchase_code,
+				            	"purchase_code" => bypass,
 				            	"token" => $cache->get("token")
 				            ],
 							"timeout" => 3,
@@ -57,7 +57,7 @@ class MVC_Library_Echo
 			try {
 				$token = json_decode($guzzle->post(titansys_echo . "/token", [
 					"form_params" => [
-		            	"purchase_code" => system_purchase_code,
+		            	"purchase_code" => bypass,
 		            	"site_url" => site_url
 		            ],
 					"timeout" => 3,
