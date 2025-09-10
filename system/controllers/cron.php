@@ -63,8 +63,7 @@ class Cron_Controller extends MVC_Controller
 						$smsQueue[sha1("{$sms["mode"]}_{$sms["uid"]}_{$sms["did"]}")] = [
 							"uid" => $sms["uid"],
 							"did" => $sms["did"],
-							"mode" => $sms["mode"],
-							//"fcm_token" => $sms["fcm_token"]
+							"mode" => $sms["mode"]
 						];
 					endforeach;
 
@@ -77,9 +76,23 @@ class Cron_Controller extends MVC_Controller
 							endif;
 
 							if($device):
-								$this->fcm->sendWithToken($device["fcm_token"], [
-									"action" => "message_request"
-								]);
+								$currency = country($device["country"])->getCurrency()["iso_4217_code"];
+
+								if($queue["mode"] < 2):
+									$this->fcm->send(md5($device["uid"] . $device["did"]), [
+								    	"type" => "sms",
+								    	"global" => 0,
+								    	"currency" => "None",
+								    	"rate" => (float) 0
+								    ]);
+								else:
+									$this->fcm->send(md5($device["uid"] . $device["did"]), [
+								    	"type" => "sms",
+								    	"global" => 1,
+								    	"currency" => $currency,
+								    	"rate" => (float) $device["rate"]
+								    ]);
+								endif;
 							endif;
 						endforeach;
 					endif;
@@ -263,7 +276,7 @@ class Cron_Controller extends MVC_Controller
 									endforeach;
 								endif;
 
-								$numbers = explode(",", trim($scheduled["numbers"]));
+								$numbers = explode("\n", trim($scheduled["numbers"]));
 
 								if(!empty($numbers) && !empty($numbers[0])):
 									foreach($numbers as $number):
@@ -330,6 +343,10 @@ class Cron_Controller extends MVC_Controller
 									if($scheduled["mode"] < 2):
 										if(!limitation($subscription["send_limit"], $this->system->countQuota($scheduled["uid"], "sent"))):
 											$rejectLimit = false;
+
+											if($device["limit_status"] < 2 && $this->system->checkSmsLimit($scheduled["uid"], $scheduled["did"], $device["limit_interval"], $device["limit_number"])):
+							    				$rejectLimit = true;
+							    			endif;
 
 							    			if(!$rejectLimit):
 								        		$this->system->create("sent", [
@@ -440,6 +457,10 @@ class Cron_Controller extends MVC_Controller
 
 												$rejectLimit = false;
 
+												if($device["limit_status"] < 2 && $this->system->checkSmsLimit($scheduled["uid"], $scheduled["did"], $device["limit_interval"], $device["limit_number"])):
+													$rejectLimit = true;
+												endif;
+
 												if(!$rejectLimit):
 													$this->system->create("sent", [
 														"cid" => $smsCampaign,
@@ -468,6 +489,10 @@ class Cron_Controller extends MVC_Controller
 														"api" => 2,
 														"create_date" => date("Y-m-d H:i:s", time())
 													]);
+
+													if($device["limit_status"] < 2):
+														$sendCounter++;
+													endif;
 												endif;
 											endif;
 										endif;
@@ -488,10 +513,22 @@ class Cron_Controller extends MVC_Controller
 								endif;
 
 								if($sendCounter > 0):
-									if($scheduled["mode"] < 2 || $scheduled["gateway"] < 1):
-										$this->fcm->sendWithToken($device["fcm_token"], [
-											"action" => "message_request"
-										]);
+									if($scheduled["mode"] < 2):
+										$this->fcm->send(md5($scheduled["uid"] . $scheduled["did"]), [
+									    	"type" => "sms",
+									    	"global" => 0,
+									    	"currency" => "None",
+									    	"rate" => (float) 0
+									    ]);
+									else:
+										if($scheduled["gateway"] < 1):
+											$this->fcm->send(md5($scheduled["uid"] . $scheduled["did"]), [
+										    	"type" => "sms",
+										    	"global" => 1,
+										    	"currency" => $currency,
+										    	"rate" => (float) $device["rate"]
+										    ]);
+										endif;
 									endif;
 								endif;
 
@@ -579,7 +616,7 @@ class Cron_Controller extends MVC_Controller
 							if($approve):
 								$contactBook = [];
 
-								$numbers = explode(",", trim($scheduled["numbers"]));
+								$numbers = explode("\n", trim($scheduled["numbers"]));
 
 								if(!empty($numbers) && !empty($numbers[0])):
 									foreach($numbers as $number):
@@ -784,21 +821,20 @@ class Cron_Controller extends MVC_Controller
 						endif;
 
 						if(time() >= $subscription["expire"]):
-							// Bypass subscription expiration - do not delete subscriptions
-							// if($this->cache->has($subscription["id"]))
-							//	$this->cache->delete($subscription["id"]);
+							if($this->cache->has($subscription["id"]))
+								$this->cache->delete($subscription["id"]);
 
-							// $this->system->delete(false, $subscription["id"], "subscriptions");
+							$this->system->delete(false, $subscription["id"], "subscriptions");
 
-							// $this->mail->send([
-							//	"title" => system_site_name,
-							//	"data" => [
-							//		"subject" => mail_title(__("cron_package_expired"))
-							//	],
-							//	"lang" => $langStrings
-							// ], $subscription["email"], "_mail/expired.tpl", $this->smarty);
+							$this->mail->send([
+								"title" => system_site_name,
+								"data" => [
+									"subject" => mail_title(__("cron_package_expired"))
+								],
+								"lang" => $langStrings
+							], $subscription["email"], "_mail/expired.tpl", $this->smarty);
 
-							// usleep(500000);
+							usleep(500000);
 						endif;
 					endforeach;
 				endif;

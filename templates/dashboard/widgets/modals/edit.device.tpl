@@ -59,6 +59,37 @@
                 </div>
 
                 <div class="form-group col-12">
+                    <h4 class="text-uppercase">{__("forms_editdevice_sendinglimittitle")}</h4>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label>
+                        {__("forms_editdevice_limitstatus")} <i class="la la-info-circle la-lg" title="{__("forms_editdevice_limitstatushelp")}"></i>
+                    </label>
+                    <select name="limit_status" class="form-control">
+                        <option value="1" {if $data.device.limit_status < 2}selected{/if}>{__("form_enable")}</option>
+                        <option value="2" {if $data.device.limit_status > 1}selected{/if}>{__("form_disable")}</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label>
+                        {__("forms_editdevice_limitinterv")} <i class="la la-info-circle la-lg" title="{__("forms_editdevice_limitintervhelp")}"></i>
+                    </label>
+                    <select name="limit_interval" class="form-control">
+                        <option value="1" {if $data.device.limit_interval < 2}selected{/if}>{__("forms_editdevice_limitintervselect1")}</option>
+                        <option value="2" {if $data.device.limit_interval > 1}selected{/if}>{__("forms_editdevice_limitintervselect2")}</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label>
+                        {__("forms_editdevice_messagecount")} <i class="la la-info-circle la-lg" title="{__("forms_editdevice_messagecounthelp")}"></i>
+                    </label>
+                    <input type="number" name="limit_number" class="form-control" placeholder="eg. 100" value="{$data.device.limit_number}">
+                </div>
+
+                <div class="form-group col-12">
                     <h4 class="text-uppercase">{__("and_edit_dev_line53")}</h4>
                 </div>
 

@@ -73,14 +73,6 @@ class System_Model extends MVC_Model
         ]);
     }
 
-    public function getUssd($id, $uid)
-    {
-        return $this->db->query_one("SELECT id, uid, did, code, sim, status, create_date FROM ussd WHERE id = ? AND uid = ?", [
-            $id,
-            $uid
-        ]);
-    }
-
     /**
      * @coverage System
      * @desc Check functions
@@ -566,32 +558,9 @@ SQL;
                 ]);
             else:
                 if($uid):
-                    $subscription = $this->db->query_one("SELECT s.id AS sid, s.pid AS pid, p.*, DATE_FORMAT(DATE_ADD(DATE(s.date), INTERVAL t.duration MONTH), '%Y-%m-%e') AS expire_date FROM subscriptions s LEFT JOIN packages p ON s.pid = p.id LEFT JOIN transactions t ON s.tid = t.id WHERE s.uid = ?", [
+                    return $this->db->query_one("SELECT s.id AS sid, s.pid AS pid, p.*, DATE_FORMAT(DATE_ADD(DATE(s.date), INTERVAL t.duration MONTH), '%Y-%m-%e') AS expire_date FROM subscriptions s LEFT JOIN packages p ON s.pid = p.id LEFT JOIN transactions t ON s.tid = t.id WHERE s.uid = ?", [
                         $uid
                     ]);
-                    
-                    // Bypass premium requirement - return unlimited premium package if no subscription exists
-                    if(empty($subscription)):
-                        return [
-                            'sid' => 999999,
-                            'pid' => 999999,
-                            'id' => 999999,
-                            'name' => 'Unlimited Premium',
-                            'send_limit' => 999999999,
-                            'receive_limit' => 999999999,
-                            'contact_limit' => 999999999,
-                            'device_limit' => 999999999,
-                            'wa_account_limit' => 999999999,
-                            'ussd_limit' => 999999999,
-                            'notification_limit' => 999999999,
-                            'scheduled_limit' => 999999999,
-                            'templates_limit' => 999999999,
-                            'shortener_limit' => 999999999,
-                            'expire_date' => date('Y-m-d', strtotime('+10 years'))
-                        ];
-                    endif;
-                    
-                    return $subscription;
                 endif;
 
                 if($default):
@@ -692,20 +661,26 @@ SQL;
     {
         switch($type):
             case "id":
-                return $this->db->query_one("SELECT id, did, uid, name, version, global_device, global_priority, global_slots, country, rate, fcm_token FROM devices WHERE uid = ? AND id = ?", [
+                return $this->db->query_one("SELECT id, did, uid, name, version, limit_status, limit_interval, limit_number, global_device, global_priority, global_slots, country, rate FROM devices WHERE uid = ? AND id = ?", [
                     $uid,
                     $identifier
                 ]);
                 break;
             case "did":
-                return $this->db->query_one("SELECT id, did, uid, name, version, global_device, global_priority, global_slots, country, rate, fcm_token FROM devices WHERE uid = ? AND did = ?", [
+                return $this->db->query_one("SELECT id, did, uid, name, version, limit_status, limit_interval, limit_number, global_device, global_priority, global_slots, country, rate FROM devices WHERE uid = ? AND did = ?", [
                     $uid,
                     $identifier
                 ]);
 
                 break;
+            case "sid":
+                return $this->db->query_one("SELECT id, did, uid, name, version, limit_status, limit_interval, limit_number, global_device, global_priority, global_slots, country, rate FROM devices WHERE online_id = ?", [
+                    $identifier
+                ]);
+
+                break;
             case "global":
-                return $this->db->query_one("SELECT id, did, uid, name, version, global_device, global_priority, global_slots, country, rate, fcm_token FROM devices WHERE did = ?", [
+                return $this->db->query_one("SELECT id, did, uid, name, version, limit_status, limit_interval, limit_number, global_device, global_priority, global_slots, country, rate FROM devices WHERE did = ?", [
                     $identifier
                 ]);
 
@@ -713,14 +688,6 @@ SQL;
             default:
                 return false;
         endswitch;
-    }
-
-    public function getSmsCampaign($uid, $id)
-    {
-        return $this->db->query_one("SELECT id, `uid`, did, gateway, mode, `status`, `name`, contacts, create_date FROM campaigns WHERE `uid` = ? AND id = ?", [
-            $uid,
-            $id
-        ]);
     }
 
     public function getWaAccount($uid, $identifier, $type)
@@ -990,7 +957,7 @@ SQL;
     public function getDevices($uid)
     {
         $query = <<<SQL
-SELECT id, uid, did, name, version, manufacturer, fcm_token, create_date
+SELECT id, uid, did, name, version, manufacturer, create_date
 FROM devices
 WHERE uid = ?
 SQL;
@@ -1012,7 +979,7 @@ SQL;
     public function getGlobalDevices($uid)
     {
         $query = <<<SQL
-SELECT id, uid, did, name, version, manufacturer, fcm_token, create_date
+SELECT id, uid, did, name, version, manufacturer, create_date
 FROM devices
 WHERE uid != ? AND global_device < 2
 SQL;
@@ -1484,6 +1451,30 @@ SQL;
                 $this->db->where("`unique`", $unique);
             
             return $this->db->update("wa_accounts", $data);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function updateOnline($did)
+    {
+        try {
+            $this->db->where("did", $did);
+            return $this->db->update("devices", [
+                "online_status" => 1
+            ]);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function updateOffline($id)
+    {
+        try {
+            $this->db->where("online_id", $id);
+            return $this->db->update("devices", [
+                "online_status" => 2
+            ]);
         } catch (Exception $e) {
             return false;
         }

@@ -9,19 +9,8 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_GET);
 
-		if(!isset($request["hash"], $request["did"]))
-			response(400, false, []);
-
-		$decode = $this->hash->decode($request["hash"], system_token);
-
-		if(!$decode)
-			response(403, false, []);
-
-		$uid = $decode;
-		$hash = md5($uid);
-	
 		$this->cache->container("system.settings");
 
         if($this->cache->empty()):
@@ -30,46 +19,149 @@ class Device_Controller extends MVC_Controller
 
         set_system($this->cache->getAll());
 
-		if($this->device->checkDevice($request["did"]) < 1)
-			response(403, false, []);
+		if(!isset(
+			$request["hash"], 
+			$request["device_unique"]
+		)):
+			set_language(system_default_lang);
 
-		$device = $this->device->getDevice($request["did"]);
+			$device = [
+				"linked" => false
+			];
+		else:
+			$decode = $this->hash->decode($request["hash"], system_token);
 
-		response(200, false, [
-			"name" => $device["name"],
-			"receive_sms" => $device["receive_sms"],
-			"random_send" => $device["random_send"],
-			"random_min" => $device["random_min"],
-			"random_max" => $device["random_max"],
-			"packages" => $device["packages"]
-		]);
+			if(!$decode)
+				response(403);
+
+			$uid = $decode;
+			$hash = md5($uid);
+
+			if($this->device->checkUserId($uid) < 1)
+        		response(403);
+
+			if($this->device->checkDevice($request["device_unique"]) < 1)
+        		response(403);
+
+			set_language($this->device->getUserLanguage($uid));
+
+			$device = $this->device->getDevice($request["device_unique"]);
+
+			if($device["uid"] != $uid):
+				$userEmail = $this->device->getUserEmail($device["uid"]);
+				response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+			endif;
+
+			$packages = array_map("trim", explode("\n", $device["packages"]));
+
+			$device = [
+				"linked" => true,
+				"packages" => empty($packages) ? false : implode(",", $packages),
+				"receive_sms" => $device["global_device"] < 2 ? 2 : $device["receive_sms"],
+				"random_send" => $device["random_send"],
+				"random_min" => $device["random_min"],
+				"random_max" => $device["random_max"],
+			];
+
+			if(isset($request["cleaner"]) && !empty($request["cleaner"])):
+				try {
+					$cleanerIds = array_values(array_filter(array_unique(explode(",", $request["cleaner"])), function($id){
+						return $this->sanitize->isInt($id);
+					}));
+
+					$cleanerRows = $this->device->getCleanerSms(implode(",", $cleanerIds), $request["device_unique"]);
+
+					$device["cleaner"] = array_diff($cleanerIds, $cleanerRows);
+				} catch(Exception $e){
+					// Ignore
+				}
+        	else:
+        		$device["cleaner"] = [];
+        	endif;
+		endif;
+
+		$device["version"] = $this->file->exists("uploads/builder/" . strtolower(system_package_name . ".apk")) ? (int) system_apk_version : (int) system_apk_version - 1;
+		$device["background"] = $this->smarty->fetch("_device/background.tpl");
+		$device["language"] = [
+			"status_gateway_running" => __("app_status_gateway_running"),
+			"status_gateway_touch" => __("app_status_gateway_touch"),
+			"device_registered" => __("app_device_registered"),
+			"device_unregistered" => __("app_device_unregistered"),
+			"terminal_gateway_ready" => __("app_terminal_gateway_ready"),
+			"terminal_gateway_register" => __("app_terminal_gateway_register"),
+			"terminal_gateway_hash" => __("app_terminal_gateway_hash"),
+			"terminal_gateway_registered" => __("app_terminal_gateway_registered"),
+			"terminal_gateway_device" => __("app_terminal_gateway_device"),
+			"terminal_gateway_connecterror" => __("app_terminal_gateway_connecterror"),
+			"terminal_gateway_started" => __("app_terminal_gateway_started"),
+			"terminal_gateway_stopped" => __("app_terminal_gateway_stopped"),
+			"terminal_gateway_unregistered" => __("app_terminal_gateway_unregistered"),
+			"terminal_feature_error" => __("app_terminal_feature_error"),
+			"terminal_sms_sent" => __("app_terminal_sms_sent"),
+			"terminal_message_failed" => __("app_terminal_message_failed"),
+			"dialog_wait" => __("app_dialog_wait"),
+			"dialog_exit" => __("app_dialog_exit"),
+			"dialog_exit_desc" => __("app_dialog_exit_desc"),
+			"camera_qrcode_inside" => __("app_camera_qrcode_inside"),
+			"ui_status" => __("app_ui_status"),
+			"ui_exit" => __("app_ui_exit"),
+			"dialog_update_desc" => __("app_dialog_update_desc"),
+			"dialog_update_download" => __("app_dialog_update_download"),
+			"gateway_build_text" => __("app_gateway_build_text"),
+			"dialog_downloading_update" => __("app_dialog_downloading_update"),
+			"dialog_interface_disabled" => __("app_dialog_interface_disabled"),
+			"dialog_somethingwent_wrong" => __("app_dialog_somethingwent_wrong"),
+			"intro_level_1" => __("app_intro_level_1"),
+			"intro_level_2" => __("app_intro_level_2"),
+			"intro_level_3" => __("app_intro_level_3"),
+			"intro_level_4" => __("app_intro_level_4"),
+			"intro_level_5" => __("app_intro_level_5"),
+			"intro_level_6" => __("app_intro_level_6"),
+			"intro_level_7" => __("app_intro_level_7"),
+			"intro_level_8" => __("app_intro_level_8new"),
+			"dialog_tour_complete" => __("app_dialog_tour_complete"),
+			"push_right_now" => __("app_push_right_now"),
+			"device_detailes_updated" => __("app_device_detailes_updated"),
+			"ussd_requests_notsupported" => __("app_ussd_requests_notsupported"),
+			"notifications_listening_now" => __("app_notifications_listening_now"),
+			"button_ok" => __("app_button_ok"),
+			"dialog_update_smoothperm" => __("app_dialog_update_smoothperm"),
+			"dialog_logging_in" => __("app_dialog_logging_in"),
+			"dialog_invalid_email" => __("app_dialog_invalid_email"),
+			"dialog_invalid_password" => __("app_dialog_invalid_password"),
+			"dialog_notifications_permission" => __("app_dialog_notifications_permission"),
+			"dialog_gateway_listennoti" => __("app_dialog_gateway_listennoti"),
+			"dialog_gateway_notirestart" => __("app_dialog_gateway_notirestart"),
+			"dialog_needto_link" => __("app_dialog_needto_link"),
+			"dialog_logoutfrom_device" => __("app_dialog_logoutfrom_device"),
+			"document_runbackground" => __("app_document_runbackground"),
+			"document_input_email" => __("app_document_input_email"),
+			"document_input_password" => __("app_document_input_password"),
+			"document_btn_login" => __("app_document_btn_login"),
+			"document_text_or" => __("app_document_text_or"),
+			"document_btn_scan" => __("app_document_btn_scan"),
+			"document_btn_cancel" => __("app_document_btn_cancel"),
+			"intro_next_btn" => __("app_intro_next_btn"),
+			"intro_back_btn" => __("app_intro_back_btn"),
+			"intro_done_btn" => __("app_intro_done_btn"),
+			"fetching_messages" => __("app_fetching_messages"),
+			"fetching_ussd" => __("app_fetching_ussd"),
+			"campaign_resumed" => __("app_campaign_resumed"),
+			"campaign_paused" => __("app_campaign_paused"),
+			"gateway_started_msg" => __("app_gateway_started_msg"),
+			"gateway_ussd_accessibility" => __("app_gateway_ussd_accessibility")
+		];
+
+		response(200, false, $device);
 	}
 
-	public function update()
+	public function echo()
 	{
 		$this->header->allow();
 
-		$this->cache->container("system.settings");
+		$request = $this->sanitize->array($_GET);
 
-        if($this->cache->empty()):
-            $this->cache->setArray($this->system->getSettings());
-        endif;
-
-		set_system($this->cache->getAll());
-
-		response(200, false, [
-			"latest_version" => system_apk_version,
-			"apk_url" => site_url("uploads/builder/gateway.apk", true)
-		]);
-	}
-
-	public function token()
-	{
-		$this->header->allow();
-
-		$request = $this->sanitize->json();
-		
-		if(!isset($request["hash"], $request["did"], $request["token"]))
+		if(!isset($request["hash"], $request["socket"], $request["did"]))
 			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
@@ -91,25 +183,42 @@ class Device_Controller extends MVC_Controller
 
         set_system($this->cache->getAll());
 
-        if($this->device->checkDevice($request["did"]) < 1)
-        	response(403);
+		try {
+			$echoToken = $this->echo->token($this->guzzle, $this->cache);
+		} catch(Exception $e){
+			response(400);
+		}
 
-		$device = $this->device->getDevice($request["did"]);
+		if(!in_array($request["socket"], ["false"]) && !in_array($request["did"], ["false"])):
+        	if($this->device->checkDevice($request["did"]) > 0):
+        		$device = $this->device->getDevice($request["did"]);
 
-		$this->system->update($device["id"], false, "devices", [
-			"fcm_token" => $request["token"]
+        		if($device["uid"] != $uid):
+					$userEmail = $this->device->getUserEmail($device["uid"]);
+					response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+				endif;
+
+				$this->system->update($device["id"], false, "devices", [
+					"online_id" => $request["socket"],
+					"online_status" => 1
+				]);
+			endif;
+		endif;
+
+		response(200, false, [
+			"hash" => $hash,
+			"token" => $echoToken,
+			"echo" => titansys_echo
 		]);
-
-		response(200);
 	}
 
 	public function messages()
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_GET);
 
-		if(!isset($request["hash"], $request["did"], $request["diff"]))
+		if(!isset($request["hash"], $request["did"], $request["fetch"], $request["diff"]))
 			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
@@ -122,6 +231,9 @@ class Device_Controller extends MVC_Controller
 
 		if($this->device->checkUserId($uid) < 1)
     		response(403);
+
+		if(!$this->sanitize->isInt($request["diff"]))
+			response(400);
 
 		$this->cache->container("system.settings");
 
@@ -141,7 +253,8 @@ class Device_Controller extends MVC_Controller
 			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
 		endif;
 
-        $messages = $this->device->getPendingMessages($request["did"], $request["diff"]);
+		$diff = $request["diff"] < 1 ? 100 : ($request["diff"] > 100 ? 100 : $request["diff"]);
+        $messages = $this->device->getPendingMessages($request["did"], $diff);
 
         $messageContainer = [];
         $hashContainer = [];
@@ -185,16 +298,47 @@ class Device_Controller extends MVC_Controller
 	        		$hashContainer[$row["uid"]] = md5($row["uid"]);
 		        endif;
 			endforeach;
+
+			try {
+				$echoToken = $this->echo->token($this->guzzle, $this->cache);
+			} catch(Exception $e){
+				response(403);
+			}
+
+			if($echoToken):
+				if(!empty($hashContainer)):
+					foreach($hashContainer as $uhash):
+						$this->echo->notify($uhash, [
+							"type" => "table"
+						], $this->guzzle, $this->cache);
+					endforeach;
+				endif;
+			endif;
+
+			if($request["fetch"] > 0):
+	        	$global = $device["global_device"] < 2 ? 1 : 0;
+
+	        	$currency = country($device["country"])->getCurrency()["iso_4217_code"];
+
+				$fetch = [
+					"payload" => [
+						"global" => $global,
+						"currency" => $global < 1 ? "None" : $currency,
+						"rate" => $device["rate"]
+					],
+					"messages" => $messageContainer
+				];
+	        endif;
         endif;
 
-        response(200, false, $messageContainer);
+        response(200, false, isset($fetch) ? $fetch : $messageContainer);
 	}
 
 	public function ussd()
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_GET);
 
 		if(!isset($request["hash"], $request["did"]))
 			response(400);
@@ -221,6 +365,13 @@ class Device_Controller extends MVC_Controller
         if($this->device->checkDevice($request["did"]) < 1)
         	response(403);
 
+        $device = $this->device->getDevice($request["did"]);
+
+        if($device["uid"] != $uid):
+			$userEmail = $this->device->getUserEmail($device["uid"]);
+			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+		endif;
+
         $ussd = $this->device->getPendingUssd($request["did"]);
 
         if(!empty($ussd)):
@@ -229,6 +380,18 @@ class Device_Controller extends MVC_Controller
         			"status" => 2
         		]);
 			endforeach;
+
+			try {
+				$echoToken = $this->echo->token($this->guzzle, $this->cache);
+			} catch(Exception $e){
+				response(403);
+			}
+
+			if($echoToken):
+				$this->echo->notify($hash, [
+					"type" => "table"
+				], $this->guzzle, $this->cache);
+			endif;
         endif;
 
         response(200, false, $ussd);
@@ -238,7 +401,7 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
 		if(!isset(
 			$request["email"], 
@@ -248,7 +411,7 @@ class Device_Controller extends MVC_Controller
 			$request["device_version"], 
 			$request["device_manufacturer"]
 		))
-			response(400, "Invalid Request!", null);
+			response(400);
 
 		$this->cache->container("system.settings");
 
@@ -261,20 +424,20 @@ class Device_Controller extends MVC_Controller
         set_language(system_default_lang);
 
 		if(!$this->sanitize->isEmail($request["email"]))
-			response(400, __("device_login_usevalidemail"), null);
+			response(400, __("device_login_usevalidemail"));
 
 		if($this->device->checkUserEmail($request["email"]) > 0):
 			$access = $this->device->getUserAccess($request["email"]);
 
 			if($access["suspended"] > 0):
-				response(403, __("device_login_accountsuspended"), null);
+				response(403, __("device_login_accountsuspended"));
 			endif;
 
 			if(!password_verify($request["password"], $access["password"])):
-				response(401, __("device_login_incorrectmailorpass"), null);
+				response(401, __("device_login_incorrectmailorpass"));
 			endif;
 		else:
-			response(401, __("device_login_incorrectmailorpass"), null);
+			response(401, __("device_login_incorrectmailorpass"));
 		endif;
 
         $subscription = set_subscription(
@@ -284,18 +447,19 @@ class Device_Controller extends MVC_Controller
         );
 
 		if(empty($subscription))
-			response(403, __("device_login_nosubscription"), null);
+			response(403, __("device_login_nosubscription"));
 
 		if($this->device->checkDevice($request["device_unique"]) > 0):
 			$device = $this->device->getDevice($request["device_unique"]);
 
 			if($device["uid"] != $access["id"]):
 				$userEmail = $this->device->getUserEmail($device["uid"]);
-				response(403, ___(__("app_response_devicealreadylinkednew"), [maskEmail($userEmail)]), null);
+				response(403, ___(__("app_response_devicealreadylinkednew"), [maskEmail($userEmail)]));
 			endif;
 			
 			response(200, false, [
 				"hash" => $this->hash->encode($access["id"], system_token),
+				"topic" => md5($access["id"] . $request["device_unique"]),
 				"name" => $device["name"],
 				"receive_sms" => $device["global_device"] < 2 ? 2 : $device["receive_sms"],
 				"random_send" => $device["random_send"],
@@ -305,7 +469,7 @@ class Device_Controller extends MVC_Controller
 		endif;
 
 		if(limitation($subscription["device_limit"], $this->system->countDevices($access["id"])))
-			response(403, __("device_login_nomoredevice"), null);
+			response(403, __("device_login_nomoredevice"));
 
     	date_default_timezone_set($this->device->getUserTimezone($access["id"]));
 
@@ -318,6 +482,9 @@ class Device_Controller extends MVC_Controller
 			"random_send" => 1,
 			"random_min" => 5,
 			"random_max" => 10,
+			"limit_status" => 2,
+			"limit_interval" => 1,
+			"limit_number" => 100,
 			"packages" => false,
 			"receive_sms" => 1,
 			"global_device" => 2,
@@ -325,7 +492,8 @@ class Device_Controller extends MVC_Controller
 			"global_slots" => 1,
 			"country" => "US",
 			"rate" => "0.01",
-			"fcm_token" => false,
+			"online_id" => false,
+			"online_status" => 2,
 			"create_date" => date("Y-m-d H:i:s", time())
 		];
 
@@ -335,16 +503,16 @@ class Device_Controller extends MVC_Controller
 
 			try {
 				$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-				if($echoToken):
-					$this->echo->notify($access["hash"], [
-						"type" => "table",
-						"modal" => true
-					], $this->guzzle, $this->cache);
-				endif;
 			} catch(Exception $e){
-				// Ignore
+				response(400);
 			}
+
+			if($echoToken):
+				$this->echo->notify($access["hash"], [
+					"type" => "table",
+					"modal" => true
+				], $this->guzzle, $this->cache);
+			endif;
 
 			if(!empty(system_mailing_address) && in_array("admin_new_device", explode(",", system_mailing_triggers))):
 				$mailingContent = <<<HTML
@@ -363,14 +531,14 @@ class Device_Controller extends MVC_Controller
 
 			response(200, false, [
 				"hash" => $this->hash->encode($access["id"], system_token),
+				"topic" => md5($access["id"] . $request["device_unique"]),
 				"name" => $request["device_model"],
-				"receive_sms" => $filtered["receive_sms"],
-				"random_send" => $filtered["random_send"],
-				"random_min" => $filtered["random_min"],	
-				"random_max" => $filtered["random_max"]
+				"random_send" => 2,
+				"random_min" => 5,
+				"random_max" => 10
 			]);
 		else:
-			response(500, "Failed to create device!", null);
+			response(500);
 		endif;
 	}
 
@@ -378,7 +546,7 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
 		if(!isset(
 			$request["hash"], 
@@ -387,18 +555,18 @@ class Device_Controller extends MVC_Controller
 			$request["device_version"], 
 			$request["device_manufacturer"]
 		))
-			response(400, "Invalid Request!", null);
+			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
 
 		if(!$decode)
-			response(403, "Invalid Request!", null);
+			response(403);
 
 		$uid = $decode;
 		$hash = md5($uid);
 
 		if($this->device->checkUserId($uid) < 1)
-    		response(403, "Invalid Request!", null);
+    		response(403);
 
 		$this->cache->container("system.settings");
 
@@ -411,7 +579,7 @@ class Device_Controller extends MVC_Controller
         set_language(system_default_lang);
 
         if($this->device->checkUserHash($hash) < 1)
-			response(403, __("device_scan_qrcodeinvalid"), null);
+			response(403, __("device_scan_qrcodeinvalid"));
 
         $subscription = set_subscription(
 	        $this->system->checkSubscription($uid), 
@@ -420,34 +588,35 @@ class Device_Controller extends MVC_Controller
 	    );
 
 		if(empty($subscription))
-			response(403, __("device_scan_nosub"), null);
+			response(403, __("device_scan_nosub"));
 
 		if($this->device->checkSuspension($uid) > 0)
-			response(403, __("device_scan_usersuspended"), null);
+			response(403, __("device_scan_usersuspended"));
 
 		if($this->device->checkDevice($request["device_unique"]) > 0):
 			$device = $this->device->getDevice($request["device_unique"]);
 
 			if($device["uid"] != $uid):
 				$userEmail = $this->device->getUserEmail($device["uid"]);
-				response(403, ___(__("app_response_devicealreadylinkednew"), [maskEmail($userEmail)]), null);
+				response(403, ___(__("app_response_devicealreadylinkednew"), [maskEmail($userEmail)]));
 			endif;
 
 			try {
 				$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-				if($echoToken):
-					$this->echo->notify($hash, [
-						"type" => "table",
-						"modal" => true
-					], $this->guzzle, $this->cache);
-				endif;
 			} catch(Exception $e){
-				// Ignore
+				response(400);
 			}
+
+			if($echoToken):
+				$this->echo->notify($hash, [
+					"type" => "table",
+					"modal" => true
+				], $this->guzzle, $this->cache);
+			endif;
 
 			response(200, false, [
 				"hash" => $this->hash->encode($uid, system_token),
+				"topic" => md5($uid . $request["device_unique"]),
 				"name" => $device["name"],
 				"receive_sms" => $device["global_device"] < 2 ? 2 : $device["receive_sms"],
 				"random_send" => $device["random_send"],
@@ -457,7 +626,7 @@ class Device_Controller extends MVC_Controller
 		endif;
 
 		if(limitation($subscription["device_limit"], $this->system->countDevices($uid)))
-			response(403, __("device_scan_nomoredevices"), null);
+			response(403, __("device_scan_nomoredevices"));
 
     	date_default_timezone_set($this->device->getUserTimezone($uid));
 
@@ -470,6 +639,9 @@ class Device_Controller extends MVC_Controller
 			"random_send" => 1,
 			"random_min" => 5,
 			"random_max" => 10,
+			"limit_status" => 2,
+			"limit_interval" => 1,
+			"limit_number" => 100,
 			"packages" => false,
 			"receive_sms" => 1,
 			"global_device" => 2,
@@ -477,7 +649,8 @@ class Device_Controller extends MVC_Controller
 			"global_slots" => 1,
 			"country" => "US",
 			"rate" => "0.01",
-			"fcm_token" => false,
+			"online_id" => false,
+			"online_status" => 2,
 			"create_date" => date("Y-m-d H:i:s", time())
 		];
 
@@ -487,16 +660,16 @@ class Device_Controller extends MVC_Controller
 
 			try {
 				$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-				if($echoToken):
-					$this->echo->notify($hash, [
-						"type" => "table",
-						"modal" => true
-					], $this->guzzle, $this->cache);
-				endif;
 			} catch(Exception $e){
-				// Ignore
+				response(400);
 			}
+
+			if($echoToken):
+				$this->echo->notify($hash, [
+					"type" => "table",
+					"modal" => true
+				], $this->guzzle, $this->cache);
+			endif;
 
 			if(!empty(system_mailing_address) && in_array("admin_new_device", explode(",", system_mailing_triggers))):
 				$userAccount = $this->system->getUser($uid);
@@ -517,14 +690,14 @@ class Device_Controller extends MVC_Controller
 
 			response(200, false, [
 				"hash" => $request["hash"],
+				"topic" => md5($uid . $request["device_unique"]),
 				"name" => $request["device_model"],
-				"receive_sms" => $filtered["receive_sms"],
-				"random_send" => $filtered["random_send"],
-				"random_min" => $filtered["random_min"],
-				"random_max" => $filtered["random_max"]
+				"random_send" => 2,
+				"random_min" => 5,
+				"random_max" => 10
 			]);
 		else:
-			response(500, "Failed to create device!", null);
+			response(500);
 		endif;
 	}
 
@@ -532,12 +705,24 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["hash"], $request["did"], $request["uid"], $request["mid"], $request["code"], $request["status"]))
+		if(!isset($request["hash"], $request["did"], $request["code"], $request["status"], $request["message"]))
 			response(400);
 
-		if(!in_array($request["status"], ["failed", "success"]))
+		try {
+			$request["message"] = json_decode(html_entity_decode($request["message"]), true);
+		} catch(Exception $e){
+			response(400);
+		}
+
+		if(!is_array($request["message"]))
+			response(400);
+
+		if(!$this->sanitize->isInt($request["status"]))
+			response(400);
+
+		if(!in_array($request["status"], [1, 2]))
 			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
@@ -571,11 +756,11 @@ class Device_Controller extends MVC_Controller
 			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
 		endif;
 
-        date_default_timezone_set($this->device->getUserTimezone($request["uid"]));
+        date_default_timezone_set($this->device->getUserTimezone($request["message"]["sms"]["uid"]));
 
-        if($this->system->checkQuota($request["uid"]) < 1):
+        if($this->system->checkQuota($request["message"]["sms"]["uid"]) < 1):
 			$this->system->create("quota", [
-				"uid" => $request["uid"],
+				"uid" => $request["message"]["sms"]["uid"],
 				"sent" => 0,
 				"received" => 0,
 				"wa_sent" => 0,
@@ -585,28 +770,26 @@ class Device_Controller extends MVC_Controller
 			]);
 		endif;
 
-        $this->system->update($request["mid"], false, "sent", [
-			"status" => $request["status"] === "success" ? 3 : 4,
+        $this->system->update($request["message"]["sms"]["id"], false, "sent", [
+			"status" => $request["status"] < 2 ? 3 : 4,
 			"status_code" => $request["code"],
 			"create_date" => date("Y-m-d H:i:s", time())
         ]);
 
-		if($device["global_device"] < 2 && $this->system->getPartnership($uid) < 2 && $request["uid"] != $uid):
-			$currency = country($device["country"])->getCurrency()["iso_4217_code"];
-
-			$final_price = $this->titansys->calculatePartnerSendPrice($currency, $device["rate"], $this->guzzle, $this->cache);
+		if($request["message"]["meta"]["global"] > 0 && $this->system->getPartnership($uid) < 2 && $request["message"]["sms"]["uid"] != $uid):
+			$final_price = $this->titansys->calculatePartnerSendPrice($request["message"]["meta"]["currency"], $request["message"]["meta"]["rate"], $this->guzzle, $this->cache);
 	        
 			if($final_price):
 				$commission = (float) (system_partner_commission / 100) * $final_price;
 
 				if($request["status"] < 2):
-					$this->system->credits($request["uid"], "decrease", $final_price);
+					$this->system->credits($request["message"]["sms"]["uid"], "decrease", $final_price);
 					$this->system->earnings($uid, "increase", $final_price - $commission);
 
 					$this->system->create("commissions", [
 						"pid" => $uid,
-						"sid" => $request["uid"],
-						"mid" => $request["mid"],
+						"sid" => $request["message"]["sms"]["uid"],
+						"mid" => $request["message"]["sms"]["id"],
 						"did" => $request["did"],
 						"original_amount" => $final_price,
 						"commission_amount" => $commission,
@@ -619,41 +802,29 @@ class Device_Controller extends MVC_Controller
 
 		try {
 			$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-			switch($request["code"]):
-				case "SMS_SENT":
-					$notifyMessage = __("device_api_messagesent");
-					$notifyType = 1;
-					break;
-				case "SMS_DELIVERED":
-					$notifyMessage = __("device_api_messagedelivered");
-					$notifyType = 1;
-					break;
-				case "DELIVERY_PENDING":
-					$notifyMessage = __("device_api_messagepending");
-					$notifyType = 2;
-					break;
-				case "DELIVERY_FAILED":
-					$notifyMessage = __("device_api_messagedeliveryfailed");
-					$notifyType = 3;
-					break;
-				default:
-					$notifyMessage = __("device_api_messagefailed");
-					$notifyType = 3;
-			endswitch;
-
-			if($echoToken):
-				$this->echo->notify($hash, [
-					"type" => "message",
-					"status" => $notifyType,
-					"content" => ___($notifyMessage, ["<strong><a href=\"#\" class=\"text-warning\" system-toggle=\"view/sent-{$request["mid"]}\">#{$request["mid"]}</a></strong>", "<strong>{$device["name"]}</strong>"])
-				], $this->guzzle, $this->cache);
-			endif;
 		} catch(Exception $e){
-			// Ignore
+			response(403);
 		}
 
-		if($request["uid"] == $uid):
+		if($request["status"] < 2):
+			if($echoToken):
+				$this->echo->notify($request["message"]["meta"]["global"] > 0 ? md5($request["message"]["sms"]["uid"]) : $hash, [
+					"type" => "message",
+					"status" => 1,
+					"content" => ___(__("device_report_smssentsuccess"), ["<strong><a href=\"#\" class=\"text-warning\" system-toggle=\"view/sent-{$request["message"]["sms"]["id"]}\">#{$request["message"]["sms"]["id"]}</a></strong>", "<strong>{$device["name"]}</strong>"])
+				], $this->guzzle, $this->cache);
+			endif;
+		else:
+			if($echoToken):
+				$this->echo->notify($request["message"]["meta"]["global"] > 0 ? md5($request["message"]["sms"]["uid"]) : $hash, [
+					"type" => "message",
+					"status" => 2,
+					"content" => ___(__("device_report_smssentfailed"), ["<strong><a href=\"#\" class=\"text-warning\" system-toggle=\"view/sent-{$request["message"]["sms"]["id"]}\">#{$request["message"]["sms"]["id"]}</a></strong>", "<strong>{$device["name"]}</strong>"])
+				], $this->guzzle, $this->cache);
+			endif;
+		endif;
+
+		if($request["message"]["meta"]["global"] < 1):
 			$this->process->_sanitize = $this->sanitize;
 			$this->process->_guzzle = $this->guzzle;
 			$this->process->_lex = $this->lex;
@@ -662,20 +833,16 @@ class Device_Controller extends MVC_Controller
 			 * Process Action Hooks
 			 */
 
-			$sent = $this->system->getSent($request["mid"]);
+			$hooks = $this->process->actionHooks($uid, 1, 1, $request["message"]["sms"]["phone"], $request["message"]["sms"]["message"], $this->device->getActions($uid, 1));
 
-			if($sent):
-				$hooks = $this->process->actionHooks($uid, 1, 1, $sent["phone"], $sent["message"], $this->device->getActions($uid, 1));
-
-				if(!empty($hooks)):
-					foreach($hooks as $hook):
-						$this->system->create("events", [
-							"uid" => $uid,
-							"type" => 2,
-							"create_date" => date("Y-m-d H:i:s", time())
-						]);
-					endforeach;
-				endif;
+			if(!empty($hooks)):
+				foreach($hooks as $hook):
+					$this->system->create("events", [
+						"uid" => $uid,
+						"type" => 2,
+						"create_date" => date("Y-m-d H:i:s", time())
+					]);
+				endforeach;
 			endif;
 		endif;
 
@@ -686,11 +853,20 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["hash"], $request["did"], $request["sim"], $request["message_id"], $request["sender"], $request["message"], $request["attachment"]))
+		if(!isset($request["hash"], $request["device_unique"], $request["slot"], $request["message"]))
 			response(400);
-		
+
+		try {
+			$request["message"] = json_decode(html_entity_decode($request["message"]), true);
+		} catch(Exception $e){
+			response(400);
+		}
+
+		if(!is_array($request["message"]))
+			response(400);
+
 		$decode = $this->hash->decode($request["hash"], system_token);
 
 		if(!$decode)
@@ -721,10 +897,15 @@ class Device_Controller extends MVC_Controller
 		if(empty($subscription))
 			response(403);
 
-		if($this->device->checkDevice($request["did"]) < 1)
+		if($this->device->checkDevice($request["device_unique"]) < 1)
         	response(403);
 
-        $device = $this->device->getDevice($request["did"]);
+        $device = $this->device->getDevice($request["device_unique"]);
+
+        if($device["uid"] != $uid):
+			$userEmail = $this->device->getUserEmail($device["uid"]);
+			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+		endif;
 
         if($this->system->checkQuota($uid) < 1):
 			$this->system->create("quota", [
@@ -741,23 +922,26 @@ class Device_Controller extends MVC_Controller
 		$received_date = date("Y-m-d", time());
 
         if($device["global_device"] < 2):
-        	if($this->system->checkDeleted($uid, $request["message_id"], $request["did"]) < 1):
+        	if($this->system->checkDeleted($uid, $request["message"]["id"], $request["device_unique"]) < 1):
 	        	$this->system->create("deleted", [
-					"rid" => $request["message_id"],
+					"rid" => $request["message"]["id"],
 					"uid" => $uid,
-					"did" => $request["did"]
+					"did" => $request["device_unique"]
 				]);
 	        endif;
 
-			response(500);
+			response(200, false, [
+	        	"id" => $request["message"]["id"],
+        		"save_date" => $received_date
+	        ]);
         endif;
 
         if(!empty($request["message"])):
         	date_default_timezone_set($this->device->getUserTimezone($uid));
 
-        	if(strtolower(substr($request["message"], 0, 4)) === "stop"):
+        	if(strtolower(substr($request["message"]["body"], 0, 4)) === "stop"):
             	try {
-				    $number = $this->phone->parse($request["sender"]);
+				    $number = $this->phone->parse($request["message"]["address"]);
 
 				    if(!$number->isValidNumber())
 						response(403);
@@ -775,16 +959,16 @@ class Device_Controller extends MVC_Controller
 				}
             endif;
 
-        	if($this->system->checkDeleted($uid, $request["message_id"], $request["did"]) < 1):
-				if($this->device->checkReceived($request["message_id"], $uid, $request["did"]) < 1):
+        	if($this->system->checkDeleted($uid, $request["message"]["id"], $request["device_unique"]) < 1):
+				if($this->device->checkReceived($request["message"]["id"], $uid, $request["device_unique"]) < 1):
 	        		if(!limitation($subscription["receive_limit"], $this->system->countQuota($uid, "received"))):
 	        			$filtered = [
-							"rid" => $request["message_id"],
+							"rid" => $request["message"]["id"],
 							"uid" => $uid,
-							"did" => $request["did"],
-							"slot" => $request["sim"],
-							"phone" => $request["sender"],
-							"message" => $request["message"],
+							"did" => $request["device_unique"],
+							"slot" => $request["slot"] < 1 ? 1 : 2,
+							"phone" => $request["message"]["address"],
+							"message" => $request["message"]["body"],
 							"receive_date" => date("Y-m-d H:i:s", time())
 						];
 
@@ -793,17 +977,17 @@ class Device_Controller extends MVC_Controller
 						if($received):
 							try {
 								$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-								if($echoToken):
-									$this->echo->notify($hash, [
-										"type" => "message",
-										"status" => 1,
-										"content" => ___(__("device_received_smsreceived"), ["<strong><a href=\"#\" class=\"text-warning\" system-toggle=\"view/received-{$received}\">" . __("response_notify_smsreceivedmessage") . "</a></strong>", "<strong>{$device["name"]}</strong>"])
-									], $this->guzzle, $this->cache);
-								endif;
 							} catch(Exception $e){
-								// Ignore
+								response(403);
 							}
+
+							if($echoToken):
+								$this->echo->notify($hash, [
+									"type" => "message",
+									"status" => 1,
+									"content" => ___(__("device_received_smsreceived"), ["<strong><a href=\"#\" class=\"text-warning\" system-toggle=\"view/received-{$received}\">" . __("response_notify_smsreceivedmessage") . "</a></strong>", "<strong>{$device["name"]}</strong>"])
+								], $this->guzzle, $this->cache);
+							endif;
 
 							$this->system->increment($uid, "received");
 
@@ -818,7 +1002,7 @@ class Device_Controller extends MVC_Controller
 							$webhooks = $this->process->webhooks($uid, "sms", [
 								"id" => (int) $received,
 								"rid" => (int) $filtered["rid"],
-								"sim" => $filtered["slot"],
+								"sim" => $request["slot"] < 1 ? 1 : 2,
 								"device" => $filtered["did"],
 								"phone" => $filtered["phone"],
 								"message" => $filtered["message"],
@@ -888,13 +1072,12 @@ class Device_Controller extends MVC_Controller
 									endif;
 								endforeach;
 
-								$device = $this->system->getDevice($uid, $filtered["did"], "did");
-
-								if($device):
-									$this->fcm->sendWithToken($device["fcm_token"], [
-										"action" => "message_request"
-									]);
-								endif;
+								$this->fcm->send(md5($uid . $filtered["did"]), [
+									"type" => "sms",
+									"global" => 0,
+									"currency" => "None",
+									"rate" => (float) 0
+								]);
 							endif;
 						endif;
 					endif;
@@ -902,16 +1085,28 @@ class Device_Controller extends MVC_Controller
 			endif;
 	    endif;
 
-        response(200);
+        response(200, false, [
+        	"id" => $request["message"]["id"],
+        	"save_date" => $received_date
+        ]);
 	}
 
 	public function response()
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["hash"], $request["did"], $request["ussd_id"], $request["response"]))
+		if(!isset($request["hash"], $request["did"], $request["ussd"], $request["response"]))
+			response(400);
+
+		try {
+			$request["ussd"] = json_decode(html_entity_decode($request["ussd"]), true);
+		} catch(Exception $e){
+			response(400);
+		}
+
+		if(!is_array($request["ussd"]))
 			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
@@ -940,6 +1135,11 @@ class Device_Controller extends MVC_Controller
 
         $device = $this->device->getDevice($request["did"]);
 
+        if($device["uid"] != $uid):
+			$userEmail = $this->device->getUserEmail($device["uid"]);
+			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+		endif;
+
         if($this->system->checkQuota($uid) < 1):
 			$this->system->create("quota", [
 				"uid" => $uid,
@@ -952,7 +1152,7 @@ class Device_Controller extends MVC_Controller
 			]);
 		endif;
 
-        if(!empty($request["ussd_id"]) && !empty($request["response"])):
+        if(!empty($request["ussd"]) && !empty($request["response"])):
         	date_default_timezone_set($this->device->getUserTimezone($uid));
 
         	$filtered = [
@@ -961,24 +1161,22 @@ class Device_Controller extends MVC_Controller
         		"create_date" => date("Y-m-d H:i:s", time())
         	];
 
-        	$ussd = $this->system->update($request["ussd_id"], false, "ussd", $filtered);
+        	$ussd = $this->system->update($request["ussd"]["id"], false, "ussd", $filtered);
 
         	if($ussd):
-				$ussdCode = $this->device->getUssd($request["ussd_id"]);
-
 				try {
 					$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-					if($echoToken):
-						$this->echo->notify($hash, [
-							"type" => "ussd",
-							"status" => 1,
-							"content" => ___(__("device_ussd_responsereceive"), ["<strong>{$device["name"]}</strong>"])
-						], $this->guzzle, $this->cache);
-					endif;
 				} catch(Exception $e){
-					// Ignore
+					response(403);
 				}
+
+				if($echoToken):
+					$this->echo->notify($hash, [
+						"type" => "ussd",
+						"status" => 1,
+						"content" => ___(__("device_ussd_responsereceive"), ["<strong>{$device["name"]}</strong>"])
+					], $this->guzzle, $this->cache);
+				endif;
 
 				$this->system->increment($uid, "ussd");
 
@@ -997,9 +1195,9 @@ class Device_Controller extends MVC_Controller
 
 	        	$webhooks = $this->process->webhooks($uid, "ussd", [
 					"id" => (int) $ussd,
-					"sim" => (int) $ussdCode["sim"],
-					"device" => $ussdCode["did"],
-					"code" => $ussdCode["code"],
+					"sim" => (int) $request["ussd"]["sim"] < 1 ? 1 : 2,
+					"device" => $request["did"],
+					"code" => $request["ussd"]["code"],
 					"response" => $filtered["response"],
 					"timestamp" => strtotime($filtered["create_date"])
 				], $this->device->getWebhooks($uid, "ussd"));
@@ -1023,9 +1221,18 @@ class Device_Controller extends MVC_Controller
 	{
 		$this->header->allow();
 
-		$request = $this->sanitize->json();
+		$request = $this->sanitize->array($_POST);
 
-		if(!isset($request["hash"], $request["did"], $request["appName"], $request["packageName"], $request["text"]))
+		if(!isset($request["hash"], $request["did"], $request["notification"]))
+			response(400);
+
+		try {
+			$request["notification"] = json_decode(html_entity_decode($request["notification"]), true);
+		} catch(Exception $e){
+			response(400);
+		}
+
+		if(!is_array($request["notification"]))
 			response(400);
 
 		$decode = $this->hash->decode($request["hash"], system_token);
@@ -1066,6 +1273,11 @@ class Device_Controller extends MVC_Controller
 
         $device = $this->device->getDevice($request["did"]);
 
+        if($device["uid"] != $uid):
+			$userEmail = $this->device->getUserEmail($device["uid"]);
+			response(403, ___(__("app_response_devicealreadylinkedunablenew"), [maskEmail($userEmail)]));
+		endif;
+
         if($this->system->checkQuota($uid) < 1):
 			$this->system->create("quota", [
 				"uid" => $uid,
@@ -1078,15 +1290,15 @@ class Device_Controller extends MVC_Controller
 			]);
 		endif;
 
-        if(!empty($request["packageName"]) && !empty($request["appName"])):
+        if(!empty($request["notification"])):
         	date_default_timezone_set($this->device->getUserTimezone($uid));
 
         	$filtered = [
         		"uid" => $uid,
         		"did" => $request["did"],
-        		"package" => $request["packageName"],
-        		"title" => $request["appName"],
-        		"text" => $request["text"],
+        		"package" => $request["notification"]["package"],
+        		"title" => $request["notification"]["title"],
+        		"text" => $request["notification"]["text"],
         		"create_date" => date("Y-m-d H:i:s", time())
         	];
 
@@ -1095,17 +1307,17 @@ class Device_Controller extends MVC_Controller
         	if($notification):
 				try {
 					$echoToken = $this->echo->token($this->guzzle, $this->cache);
-
-					if($echoToken):
-						$this->echo->notify($hash, [
-							"type" => "notification",
-							"status" => 1,
-							"content" => ___(__("device_notification_notireceive"), ["<strong>{$device["name"]}</strong>"])
-						], $this->guzzle, $this->cache);
-					endif;
 				} catch(Exception $e){
-					// Ignore
+					response(403);
 				}
+
+				if($echoToken):
+					$this->echo->notify($hash, [
+						"type" => "notification",
+						"status" => 1,
+						"content" => ___(__("device_notification_notireceive"), ["<strong>{$device["name"]}</strong>"])
+					], $this->guzzle, $this->cache);
+				endif;
 
 	        	$this->system->increment($uid, "notifications");
 

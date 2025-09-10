@@ -32,9 +32,9 @@
 
                 <div class="form-group col-md-3">
                     <label>
-                        Purchase Code (Bypassed) <i class="la la-info-circle la-lg" title="Purchase code validation has been bypassed"></i>
+                        {__("form_settingspcode")} <i class="la la-info-circle la-lg" title="{__("and_settings_line35")}"></i>
                     </label>
-                    <input type="text" name="purchase_code" class="form-control" placeholder="Automatically bypassed" value="bypass-auto" readonly>
+                    <input type="text" name="purchase_code" class="form-control" placeholder="{__("and_settings_line37")}" value="{$data.system.purchase_code}">
                 </div>
 
                 <div class="form-group col-md-3">

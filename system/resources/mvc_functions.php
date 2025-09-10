@@ -357,26 +357,6 @@ function limitation($limit, $used)
     endif;
 }
 
-function smsStatusParser($status)
-{
-    switch($status):
-        case 1:
-            return "queued";
-
-            break;
-        case 2:
-            return "pending";
-
-            break;
-        case 3:
-            return "sent";
-
-            break;
-        default:
-            return "failed";
-    endswitch;
-}
-
 function footermark($state, $message, $mark)
 {   
     if($state < 2 && !empty($mark)):

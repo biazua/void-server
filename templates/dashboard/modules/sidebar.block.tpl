@@ -188,14 +188,14 @@
                 {if in_array("android_ussd", split($subscription.services, ","))}
                 <li class="nav-item">
                     <a href="{site_url("dashboard/android/ussd")}" class="nav-link" system-nav>
-                        <i class="la la-satellite-dish la-lg"></i> {__("and_dashboard_pages_android_line46")}
+                        <i class="la la-mobile la-lg"></i> {__("and_dashboard_pages_android_line46")}
                     </a>
                 </li>
                 {/if}
                 {if in_array("android_notifications", split($subscription.services, ","))}
                 <li class="nav-item">
                     <a href="{site_url("dashboard/android/notifications")}" class="nav-link" system-nav>
-                        <i class="la la-bell la-lg"></i> {__("and_dashboard_pages_android_line52")}
+                        <i class="la la-satellite-dish la-lg"></i> {__("and_dashboard_pages_android_line52")}
                     </a>
                 </li>
                 {/if}
@@ -275,7 +275,7 @@
             <ul class="navbar-nav" system-navbar>
                 <li class="nav-item">
                     <a href="{site_url("dashboard/ai/keys")}" class="nav-link" system-nav>
-                        <i class="la la-key la-lg"></i> {__("ai_menu_title_aikeys")}
+                        <i class="la la-key la-lg"></i> {__("template_sidebar_ai_keys")}
                     </a>
                 </li>
                 <li class="nav-item">

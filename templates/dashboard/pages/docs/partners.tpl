@@ -21,23 +21,7 @@
     <div class="container">
         <div class="card">
             <div class="card-body">
-                <h3 class="mb-3">{__("and_doc_partner_intro_title")}</h3>
-                <p>{__("and_doc_partner_intro_line1")}</p>
-                <p>{__("and_doc_partner_intro_line2")}</p>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_partner_earning_title")}</h3>
-                <ul class="list-group list-group-flush mb-3">
-                    <li class="list-group-item">{__("and_doc_partner_earning_case1")}</li>
-                    <li class="list-group-item">{__("and_doc_partner_earning_case2")}</li>
-                </ul>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_partner_how_title")}</h3>
-                <div class="text-center my-4">
-                    <img src="{_assets("images/partners1.png")}" alt="{__('and_doc_partner_how_alt')}" class="img-fluid rounded shadow-sm">
-                </div>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_partner_apply_title")}</h3>
-                <p>{__("and_doc_partner_apply_line1")}</p>
+                <iframe class="pb-3 w-100 border-0" system-iframe="{site_url}/templates/_mkdocs/partnership/index.html"></iframe>
             </div>
         </div>
 

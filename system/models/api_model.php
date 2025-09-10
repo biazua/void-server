@@ -31,54 +31,6 @@ class Api_Model extends MVC_Model
         return $this->db->num_rows();
     }
 
-    public function checkSmsSent($id, $uid)
-    {
-        $this->db->query("SELECT id FROM `sent` WHERE id = ? AND uid = ?", [
-            $id,
-            $uid
-        ]);
-
-        return $this->db->num_rows();
-    }
-
-    public function checkSmsReceived($id, $uid)
-    {
-        $this->db->query("SELECT id FROM received WHERE id = ? AND uid = ?", [
-            $id,
-            $uid
-        ]);
-
-        return $this->db->num_rows();
-    }
-
-    public function getSmsSent($id, $uid)
-    {
-        $query = <<<SQL
-SELECT s.*, g.name AS gateway_name
-FROM sent s
-LEFT JOIN gateways g ON s.gateway = g.id
-WHERE s.id = ? AND s.uid = ?
-LIMIT 1
-SQL;
-
-        return $this->db->query_one($query, [
-            $id,
-            $uid
-        ]);
-    }
-
-    public function getSmsReceived($id, $uid)
-    {
-        $query = <<<SQL
-SELECT * FROM received WHERE id = ? AND uid = ?
-SQL;
-
-        return $this->db->query_one($query, [
-            $id,
-            $uid
-        ]);
-    }
-
     public function checkWaCampaign($id, $uid)
     {
         $this->db->query("SELECT id FROM wa_campaigns WHERE id = ? AND uid = ?", [
@@ -97,50 +49,6 @@ SQL;
         ]);
 
         return $this->db->num_rows();
-    }
-
-    public function checkWaSent($id, $uid)
-    {
-        $this->db->query("SELECT id FROM wa_sent WHERE id = ? AND uid = ?", [
-            $id,
-            $uid
-        ]);
-
-        return $this->db->num_rows();
-    }
-
-    public function checkWaReceived($id, $uid)
-    {
-        $this->db->query("SELECT id FROM wa_received WHERE id = ? AND uid = ?", [
-            $id,
-            $uid
-        ]);
-
-        return $this->db->num_rows();
-    }
-
-    public function getWaSent($id, $uid)
-    {
-        $query = <<<SQL
-SELECT * FROM wa_sent WHERE id = ? AND uid = ?
-SQL;
-
-        return $this->db->query_one($query, [
-            $id,
-            $uid
-        ]);
-    }
-
-    public function getWaReceived($id, $uid)
-    {
-        $query = <<<SQL
-SELECT * FROM wa_received WHERE id = ? AND uid = ?
-SQL;
-
-        return $this->db->query_one($query, [
-            $id,
-            $uid
-        ]);
     }
 
     public function getApikey($secret)
@@ -502,7 +410,7 @@ SQL;
         $page = $page < 2 ? 0 : $page * $limit;
 
         $query = <<<SQL
-SELECT id, did, name, version, manufacturer, random_send, random_min, random_max, packages, global_device, global_priority, global_slots, country, rate, create_date
+SELECT id, did, name, version, manufacturer, random_send, random_min, random_max, limit_status, limit_interval, limit_number, packages, global_device, global_priority, global_slots, country, rate, online_id, online_status, create_date
 FROM devices 
 WHERE uid = ? 
 ORDER BY create_date DESC
@@ -544,7 +452,7 @@ SQL;
     public function getPartners($uid)
     {
         $query = <<<SQL
-SELECT d.did AS `unique`, d.name AS name, d.version AS version, d.global_priority AS priority, d.global_slots AS slots, d.country AS country, d.rate AS rate, u.email AS owner 
+SELECT d.did AS `unique`, d.name AS name, d.version AS version, d.global_priority AS priority, d.global_slots AS slots, d.country AS country, d.rate AS rate, d.online_status AS status, u.email AS owner 
 FROM devices d
 LEFT JOIN users u ON d.uid = u.id
 WHERE d.global_device < 2 AND d.uid != ?

@@ -21,35 +21,7 @@
     <div class="container">
         <div class="card">
             <div class="card-body">
-                <h3 class="mb-3">{__("and_doc_android_intro_title")}</h3>
-                <p>{__("and_doc_android_intro_line1")}</p>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_android_versions_title")}</h3>
-                <p>{__("and_doc_android_versions_line1")}</p>
-                <ul class="list-group mb-3">
-                    <li class="list-group-item">{__("and_doc_android_version_oreo")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_pie")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_10")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_11")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_12")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_13")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_14")}</li>
-                    <li class="list-group-item">{__("and_doc_android_version_15")}</li> 
-                </ul>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_android_receive_title")}</h3>
-                <p>{__("and_doc_android_receive_line1")}</p>
-                <p>{__("and_doc_android_receive_line2")}</p>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_android_interval_title")}</h3>
-                <p>{__("and_doc_android_interval_line1")}</p>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_android_notifications_title")}</h3>
-                <p>{__("and_doc_android_notifications_line1")}</p>
-                <p>{__("and_doc_android_notifications_line2")}</p>
-
-                <h3 class="mt-5 mb-3">{__("and_doc_android_partner_title")}</h3>
-                <p>{__("and_doc_android_partner_line1")}</p>
+                <iframe class="pb-3 w-100 border-0" system-iframe="{site_url}/templates/_mkdocs/devices/index.html"></iframe>
             </div>
         </div>
 

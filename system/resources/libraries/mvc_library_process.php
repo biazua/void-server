@@ -91,95 +91,7 @@ class MVC_Library_Process
 
 						if(isset($extra["account"]) && $extra["account"] == $autoreply["account"]):
 							$noneWhatsApp = false;
-							$continueResponse = false;
 
-							if($autoreply["group_trigger"] > 1):
-								$checkPhoneIfGroup = explode("@", $phone);
-
-								if(count($checkPhoneIfGroup) < 2):
-									$continueResponse = true;
-								endif;
-							else:
-								$continueResponse = true;
-							endif;
-
-							if($continueResponse):
-								try {
-									$msgDecode = json_decode($autoreply["message"], true, JSON_THROW_ON_ERROR);
-				
-									if(isset($msgDecode["caption"])):
-										$msgDecode["caption"] = $this->_lex->parse(footermark($subscription["footermark"], $msgDecode["caption"], system_message_mark), [
-											"phone" => $phone,
-											"message" => $message,
-											"date" => [
-												"now" => date("F j, Y"),
-												"time" => date("h:i A") 
-											]
-										]);
-									endif;
-
-									if(isset($msgDecode["text"])):
-										$msgDecode["text"] = $this->_lex->parse(footermark($subscription["footermark"], $msgDecode["text"], system_message_mark), [
-											"phone" => $phone,
-											"message" => $message,
-											"date" => [
-												"now" => date("F j, Y"),
-												"time" => date("h:i A") 
-											]
-										]);
-									endif;
-								} catch(Exception $e){
-									$rejected = true;
-								}
-
-								if(!$rejected):
-									$actionArray[] = [
-										"priority" => $autoreply["priority"],
-										"account" => $extra["account"],
-										"message" => json_encode($msgDecode)
-									];
-								endif;
-							endif;
-						else:
-							if(isset($extra["sim"]) && $extra["sim"] == $autoreply["sim"] && $extra["device"] == $autoreply["device"]):
-								$noneSms = false;
-
-								$actionArray[] = [
-									"priority" => $autoreply["priority"],
-									"device" => $extra["device"],
-									"message" => $this->_lex->parse(footermark($subscription["footermark"], $autoreply["message"], system_message_mark), [
-										"phone" => $phone,
-										"message" => $message,
-										"date" => [
-											"now" => date("F j, Y"),
-											"time" => date("h:i A") 
-										]
-									])
-								];
-							endif;
-						endif;
-					endif;
-				endif;
-			endforeach;
-
-			foreach($autoreplies as $autoreply):
-				if($source == $autoreply["source"] && $autoreply["match"] == 5):
-					$rejected = false;
-
-					if(isset($extra["account"]) && $noneWhatsApp && $extra["account"] == $autoreply["account"]):
-						$continueResponse = false;
-
-						if($autoreply["group_trigger"] > 1):
-							$checkPhoneIfGroup = explode("@", $phone);
-
-							if(count($checkPhoneIfGroup) < 2):
-								$continueResponse = true;
-							endif;
-						else:
-							$continueResponse = true;
-						endif;
-
-						if($continueResponse):
 							try {
 								$msgDecode = json_decode($autoreply["message"], true, JSON_THROW_ON_ERROR);
 			
@@ -215,6 +127,67 @@ class MVC_Library_Process
 									"message" => json_encode($msgDecode)
 								];
 							endif;
+						else:
+							if(isset($extra["sim"]) && $extra["sim"] == $autoreply["sim"] && $extra["device"] == $autoreply["device"]):
+								$noneSms = false;
+
+								$actionArray[] = [
+									"priority" => $autoreply["priority"],
+									"device" => $extra["device"],
+									"message" => $this->_lex->parse(footermark($subscription["footermark"], $autoreply["message"], system_message_mark), [
+										"phone" => $phone,
+										"message" => $message,
+										"date" => [
+											"now" => date("F j, Y"),
+											"time" => date("h:i A") 
+										]
+									])
+								];
+							endif;
+						endif;
+					endif;
+				endif;
+			endforeach;
+
+			foreach($autoreplies as $autoreply):
+				if($source == $autoreply["source"] && $autoreply["match"] == 5):
+					$rejected = false;
+
+					if(isset($extra["account"]) && $noneWhatsApp && $extra["account"] == $autoreply["account"]):
+						try {
+							$msgDecode = json_decode($autoreply["message"], true, JSON_THROW_ON_ERROR);
+		
+							if(isset($msgDecode["caption"])):
+								$msgDecode["caption"] = $this->_lex->parse(footermark($subscription["footermark"], $msgDecode["caption"], system_message_mark), [
+									"phone" => $phone,
+									"message" => $message,
+									"date" => [
+										"now" => date("F j, Y"),
+										"time" => date("h:i A") 
+									]
+								]);
+							endif;
+
+							if(isset($msgDecode["text"])):
+								$msgDecode["text"] = $this->_lex->parse(footermark($subscription["footermark"], $msgDecode["text"], system_message_mark), [
+									"phone" => $phone,
+									"message" => $message,
+									"date" => [
+										"now" => date("F j, Y"),
+										"time" => date("h:i A") 
+									]
+								]);
+							endif;
+						} catch(Exception $e){
+							$rejected = true;
+						}
+
+						if(!$rejected):
+							$actionArray[] = [
+								"priority" => $autoreply["priority"],
+								"account" => $extra["account"],
+								"message" => json_encode($msgDecode)
+							];
 						endif;
 					else:
 						if(isset($extra["sim"]) && $noneSms && $extra["sim"] == $autoreply["sim"] && $extra["device"] == $autoreply["device"]):
@@ -238,7 +211,7 @@ class MVC_Library_Process
 					if(isset($extra["account"]) && $extra["account"] == $autoreply["account"]):
 						$continueResponse = false;
 
-						if($autoreply["group_trigger"] > 1):
+						if($autoreply["ai_group_reply"] > 1):
 							$checkPhoneIfGroup = explode("@", $phone);
 
 							if(count($checkPhoneIfGroup) < 2):
@@ -325,7 +298,7 @@ class MVC_Library_Process
 
 				break;
 			case 3:
-				$keywords = array_map("trim", explode(",", $this->_sanitize->cleanAutoreplyKeywordCommas($trigger)));
+				$keywords = array_map("trim", explode(",", trim($trigger)));
 
 				foreach ($keywords as $keyword):
 					$escapedKeyword = preg_quote($keyword, '/');

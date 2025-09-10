@@ -194,12 +194,6 @@ class Table_Controller extends MVC_Controller
 										case 14:
 											$android = __("table_androidver_14");
 											break;
-										case 15:
-											$android = __("table_androidver_15");
-											break;
-										case 16:
-											$android = __("table_androidver_16");
-											break;
 										default:
 											$android = __("table_unknown_data");
 									endswitch;
@@ -469,12 +463,6 @@ class Table_Controller extends MVC_Controller
 											break;
 										case 14:
 											$android = __("table_androidver_14");
-											break;
-										case 15:
-											$android = __("table_androidver_15");
-											break;
-										case 16:
-											$android = __("table_androidver_16");
 											break;
 										default:
 											$android = __("table_unknown_data");
@@ -861,12 +849,6 @@ class Table_Controller extends MVC_Controller
 									case 14:
 										$android = __("table_androidver_14");
 										break;
-									case 15:
-										$android = __("table_androidver_15");
-										break;
-									case 16:
-										$android = __("table_androidver_16");
-										break;
 									default:
 										$android = __("table_unknown_data");
 								endswitch;
@@ -1231,23 +1213,24 @@ class Table_Controller extends MVC_Controller
 				endif;
 
 				break;
-			case "whatsapp.queue":
+			case "whatsapp.sent":
 				if(isset($request["structure"])):
 					$structure = [
 						"limit" => 10,
-						"search" => [
-							"disable" => true
+						"history" => [
+							"column" => "create_date"
+						],
+						"export" => [
+							"export_columns" => [0, 1, 2, 3, 4, 5],
+							"copy_title" => ___(__("table_whatsappsent_exportcopy"), [date("d-m-Y (g:s A)")]),
+							"excel_filename" => ___(__("table_whatsappsent_exportexcel"), [date("d-m-Y (g:s A)")]),
+							"pdf_filename" => ___(__("table_whatsappsent_exportpdf"), [date("d-m-Y (g:s A)")])
 						],
 						"columns" => [
 							[
-								"title" => "status",
-								"data" => "status",
-								"visible" => false,
-								"searchable" => false
-							],
-							[
 								"title" => __("dashboard_messages_tablesentcreated"),
-								"data" => "create_date"
+								"data" => "create_date",
+								"width" => "15%"
 							],
 							[
 								"title" => __("table_whatsappsent_accounttitle"),
@@ -1260,6 +1243,210 @@ class Table_Controller extends MVC_Controller
 							[
 								"title" => __("table_whatsappsent_msgtitle"),
 								"data" => "message",
+								"width" => "20%",
+								"sortable" => false
+							],
+							[
+								"title" => __("table_whatsappsent_apititle"),
+								"data" => "api",
+								"sortable" => false
+							],
+							[
+								"title" => __("table_whatsappsent_statustitle"),
+								"data" => "status",
+								"sortable" => false
+							],
+							[
+								"title" => __("dashboard_messages_tablesentoptions"),
+								"data" => "options",
+								"sortable" => false
+							]
+						]
+					];
+				else:
+					$datatable = $this->datatable->complex($request, "wa_sent", [
+						[
+							"db" => "create_date",
+							"dt" => "create_date",
+							"formatter" => function($value){
+								$createDate = date(logged_date_format, strtotime($value));
+								$createTime = date(logged_clock_format, strtotime($value));
+								return <<<HTML
+								{$createDate}<br>
+								({$createTime})
+								HTML;
+							}
+						],
+						[	
+							"db" => "wid",
+							"dt" => "account",
+							"formatter" => function($value){
+								$wid = explode(":", $value);
+
+								return "+{$wid[0]}";
+							}
+						],
+						[
+							"db" => "phone",
+							"dt" => "phone",
+							"formatter" => function($value){
+								$this->cache->container("contacts." . logged_hash);
+
+								if($this->cache->empty()):
+									$this->cache->setArray($this->table->getContacts(logged_id));
+								endif;
+
+								$contacts = $this->cache->getAll();
+
+								$this->cache->container("wa.contacts." . logged_hash);
+
+								if($this->cache->empty()):
+									$this->cache->setArray($this->table->getWaGroups(logged_id));
+								endif;
+
+								$waGroups = $this->cache->getAll();
+
+								$contactName = isset($contacts[$value]) ? "<i class=\"la la-phone\"></i> {$contacts[$value]["name"]}" : (isset($waGroups[$value]) ? "<i class=\"la la-layer-group\"></i> {$waGroups[$value]["name"]}" : __("table_unknown_data"));
+								$contactPhone = mb_strlen($value) > 13 ? mb_substr($value, 0, 10) . "..." : $value;
+
+								return <<<HTML
+								{$contactName}<br>
+								{$contactPhone}
+								HTML;
+							}
+						],
+						[
+							"db" => "message",
+							"dt" => "message",
+							"formatter" => function($value, $row){
+								try {
+									$msgDecode = json_decode($value, true, JSON_THROW_ON_ERROR);
+
+									if(isset($msgDecode["audio"])):
+										$waMessage = __("table_wareceived_attachmentnomsg");
+									else:
+										$waMessage = isset($msgDecode["text"]) ? $msgDecode["text"] : $msgDecode["caption"];
+									endif;
+								} catch(Exception $e){
+									$waMessage = $value;
+								}
+
+								$messageStr = mb_strlen($waMessage) > 25 ? mb_substr($waMessage, 0, 20) . "...<br><button class=\"btn btn-sm btn-primary lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.sent-{$row["id"]}\">" . __("dashboard_messages_tablefullmessage") . "</button>" : $waMessage;
+								
+								$exportData = $this->sanitize->string($waMessage, true);
+
+								return <<<HTML
+								<p export-data="{$exportData}">{$messageStr}</p>
+								HTML;
+							}
+						],
+						[
+							"db" => "api",
+							"dt" => "api",
+							"formatter" => function($value){
+								return $value < 2 ? __("table_yes_data") : __("table_no_data");
+							}
+						],
+						[
+							"db" => "status",
+							"dt" => "status",
+							"formatter" => function($value){
+								switch($value):
+									case 1:
+										$sentStatus = "<span class=\"badge badge-info\" export-data=\"{$GLOBALS["__"]("table_whatsapp_pendinglabel")}\">{$GLOBALS["__"]("table_whatsapp_pendinglabel")}</span>";
+										break;
+									case 2:
+										$sentStatus = "<span class=\"badge badge-warning\" export-data=\"{$GLOBALS["__"]("table_whatsapp_queuelabel")}\">{$GLOBALS["__"]("table_whatsapp_queuelabel")}</span>";
+										break;
+									case 3:
+										$sentStatus = "<span class=\"badge badge-success\" export-data=\"{$GLOBALS["__"]("table_whatsapp_sentlabel")}\">{$GLOBALS["__"]("table_whatsapp_sentlabel")}</span>";
+										break;
+									default:
+										$sentStatus = "<span class=\"badge badge-danger\" export-data=\"{$GLOBALS["__"]("table_whatsapp_failedlabel")}\">{$GLOBALS["__"]("table_whatsapp_failedlabel")}</span>";
+								endswitch;
+
+								return $sentStatus;
+							}
+						],
+						[
+							"dt" => "options",
+							"formatter" => function($row){
+								$downloadBtn = false;
+								$downloadLink = "href=\"javascript:void(0)\"";
+
+								try {
+									$msgDecode = json_decode($row["message"], true, JSON_THROW_ON_ERROR);
+
+									if(isset($msgDecode["image"])):
+										$downloadLink = "href=\"{$msgDecode["image"]["url"]}\" target=\"_blank\"";
+									elseif(isset($msgDecode["audio"])):
+										$downloadLink = "href=\"{$msgDecode["audio"]["url"]}\" target=\"_blank\"";
+									elseif(isset($msgDecode["video"])):
+										$downloadLink = "href=\"{$msgDecode["video"]["url"]}\" target=\"_blank\"";
+									elseif(isset($msgDecode["document"])):
+										$downloadLink = "href=\"{$msgDecode["document"]["url"]}\" target=\"_blank\"";
+									else:
+										$downloadBtn = " disabled";
+									endif;
+								} catch(Exception $e){
+									$downloadBtn = " disabled";
+								}
+
+								return <<<HTML
+								<div class="table-buttons">
+								    <div class="btn-group">
+								    	<a {$downloadLink}><button class="btn btn-sm btn-primary lift" title="{$GLOBALS["__"]("tables_wabtn_downloadattach")}" {$downloadBtn}>
+								            <i class="la la-download"></i>
+								        </button></a>
+								        <button class="btn btn-sm btn-danger lift" title="{$GLOBALS["__"]("table_title_deletethisitem")}" system-delete="wa.sent/{$row["id"]}">
+								            <i class="la la-trash"></i>
+								        </button>
+								    </div>
+								</div>
+								HTML;
+							}
+						]
+					], 
+					[
+						"id",
+					],
+					[
+						"uid = " . logged_id . " AND status > 2"
+					]);
+				endif;
+
+				break;
+			case "whatsapp.queue":
+				if(isset($request["structure"])):
+					$structure = [
+						"limit" => 10,
+						"search" => [
+							"disable" => true
+						],
+						"columns" => [
+							[
+								"title" => "Status",
+								"data" => "status",
+								"visible" => false,
+								"searchable" => false
+							],
+							[
+								"title" => __("dashboard_messages_tablesentcreated"),
+								"data" => "create_date",
+								"width" => "15%"
+							],
+							[
+								"title" => __("table_whatsappsent_accounttitle"),
+								"data" => "account"
+							],
+							[
+								"title" => __("table_whatsappsent_recipienttitle"),
+								"data" => "phone"
+							],
+							[
+								"title" => __("table_whatsappsent_msgtitle"),
+								"data" => "message",
+								"width" => "20%",
 								"sortable" => false
 							],
 							[
@@ -1328,10 +1515,11 @@ class Table_Controller extends MVC_Controller
 								$waGroups = $this->cache->getAll();
 
 								$contactName = isset($contacts[$value]) ? "<i class=\"la la-phone\"></i> {$contacts[$value]["name"]}" : (isset($waGroups[$value]) ? "<i class=\"la la-layer-group\"></i> {$waGroups[$value]["name"]}" : __("table_unknown_data"));
+								$contactPhone = mb_strlen($value) > 13 ? mb_substr($value, 0, 10) . "..." : $value;
 
 								return <<<HTML
 								{$contactName}<br>
-								{$value}
+								{$contactPhone}
 								HTML;
 							}
 						],
@@ -1351,7 +1539,7 @@ class Table_Controller extends MVC_Controller
 									$waMessage = $value;
 								}
 
-								$messageStr = mb_strlen($waMessage) > 10 ? mb_substr($waMessage, 0, 10) . "...<br><button class=\"btn btn-sm btn-primary lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.sent-{$row["id"]}\"><i class=\"la la-search\"></i></button>" : $waMessage;
+								$messageStr = mb_strlen($waMessage) > 25 ? mb_substr($waMessage, 0, 20) . "...<br><button class=\"btn btn-sm btn-primary lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.sent-{$row["id"]}\">" . __("dashboard_messages_tablefullmessage") . "</button>" : $waMessage;
 
 								return $messageStr;
 							}
@@ -1427,368 +1615,6 @@ class Table_Controller extends MVC_Controller
 					],
 					[
 						"uid = " . logged_id . " AND status < 3"
-					]);
-				endif;
-
-				break;
-			case "whatsapp.sent":
-				if(isset($request["structure"])):
-					$structure = [
-						"limit" => 10,
-						"history" => [
-							"column" => "create_date"
-						],
-						"export" => [
-							"export_columns" => [0, 1, 2, 3, 4, 5],
-							"copy_title" => ___(__("table_whatsappsent_exportcopy"), [date("d-m-Y (g:s A)")]),
-							"excel_filename" => ___(__("table_whatsappsent_exportexcel"), [date("d-m-Y (g:s A)")]),
-							"pdf_filename" => ___(__("table_whatsappsent_exportpdf"), [date("d-m-Y (g:s A)")])
-						],
-						"columns" => [
-							[
-								"title" => __("dashboard_messages_tablesentcreated"),
-								"data" => "create_date"
-							],
-							[
-								"title" => __("table_whatsappsent_accounttitle"),
-								"data" => "account"
-							],
-							[
-								"title" => __("table_whatsappsent_recipienttitle"),
-								"data" => "phone"
-							],
-							[
-								"title" => __("table_whatsappsent_msgtitle"),
-								"data" => "message",
-								"sortable" => false
-							],
-							[
-								"title" => __("table_whatsappsent_apititle"),
-								"data" => "api",
-								"sortable" => false
-							],
-							[
-								"title" => __("table_whatsappsent_statustitle"),
-								"data" => "status",
-								"sortable" => false
-							],
-							[
-								"title" => __("dashboard_messages_tablesentoptions"),
-								"data" => "options",
-								"sortable" => false
-							]
-						]
-					];
-				else:
-					$datatable = $this->datatable->complex($request, "wa_sent", [
-						[
-							"db" => "create_date",
-							"dt" => "create_date",
-							"formatter" => function($value){
-								$createDate = date(logged_date_format, strtotime($value));
-								$createTime = date(logged_clock_format, strtotime($value));
-								return <<<HTML
-								{$createDate}<br>
-								({$createTime})
-								HTML;
-							}
-						],
-						[	
-							"db" => "wid",
-							"dt" => "account",
-							"formatter" => function($value){
-								$wid = explode(":", $value);
-
-								return "+{$wid[0]}";
-							}
-						],
-						[
-							"db" => "phone",
-							"dt" => "phone",
-							"formatter" => function($value){
-								$this->cache->container("contacts." . logged_hash);
-
-								if($this->cache->empty()):
-									$this->cache->setArray($this->table->getContacts(logged_id));
-								endif;
-
-								$contacts = $this->cache->getAll();
-
-								$this->cache->container("wa.contacts." . logged_hash);
-
-								if($this->cache->empty()):
-									$this->cache->setArray($this->table->getWaGroups(logged_id));
-								endif;
-
-								$waGroups = $this->cache->getAll();
-
-								$contactName = isset($contacts[$value]) ? "<i class=\"la la-phone\"></i> {$contacts[$value]["name"]}" : (isset($waGroups[$value]) ? "<i class=\"la la-layer-group\"></i> {$waGroups[$value]["name"]}" : __("table_unknown_data"));
-
-								return <<<HTML
-								{$contactName}<br>
-								{$value}
-								HTML;
-							}
-						],
-						[
-							"db" => "message",
-							"dt" => "message",
-							"formatter" => function($value, $row){
-								try {
-									$msgDecode = json_decode($value, true, JSON_THROW_ON_ERROR);
-
-									if(isset($msgDecode["audio"])):
-										$waMessage = __("table_wareceived_attachmentnomsg");
-									else:
-										$waMessage = isset($msgDecode["text"]) ? $msgDecode["text"] : $msgDecode["caption"];
-									endif;
-								} catch(Exception $e){
-									$waMessage = $value;
-								}
-
-								$messageStr = mb_strlen($waMessage) > 10 ? mb_substr($waMessage, 0, 10) . "...<br><button class=\"btn btn-sm btn-info lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.sent-{$row["id"]}\"><i class=\"la la-search\"></i></button>" : $waMessage;
-								
-								$exportData = $this->sanitize->string($waMessage, true);
-
-								return <<<HTML
-								<p export-data="{$exportData}">{$messageStr}</p>
-								HTML;
-							}
-						],
-						[
-							"db" => "api",
-							"dt" => "api",
-							"formatter" => function($value){
-								return $value < 2 ? __("table_yes_data") : __("table_no_data");
-							}
-						],
-						[
-							"db" => "status",
-							"dt" => "status",
-							"formatter" => function($value){
-								switch($value):
-									case 1:
-										$sentStatus = "<span class=\"badge badge-info\" export-data=\"{$GLOBALS["__"]("table_whatsapp_pendinglabel")}\">{$GLOBALS["__"]("table_whatsapp_pendinglabel")}</span>";
-										break;
-									case 2:
-										$sentStatus = "<span class=\"badge badge-warning\" export-data=\"{$GLOBALS["__"]("table_whatsapp_queuelabel")}\">{$GLOBALS["__"]("table_whatsapp_queuelabel")}</span>";
-										break;
-									case 3:
-										$sentStatus = "<span class=\"badge badge-success\" export-data=\"{$GLOBALS["__"]("table_whatsapp_sentlabel")}\">{$GLOBALS["__"]("table_whatsapp_sentlabel")}</span>";
-										break;
-									default:
-										$sentStatus = "<span class=\"badge badge-danger\" export-data=\"{$GLOBALS["__"]("table_whatsapp_failedlabel")}\">{$GLOBALS["__"]("table_whatsapp_failedlabel")}</span>";
-								endswitch;
-
-								return $sentStatus;
-							}
-						],
-						[
-							"dt" => "options",
-							"formatter" => function($row){
-								$downloadBtn = false;
-								$downloadLink = "href=\"javascript:void(0)\"";
-
-								try {
-									$msgDecode = json_decode($row["message"], true, JSON_THROW_ON_ERROR);
-
-									if(isset($msgDecode["image"])):
-										$downloadLink = "href=\"{$msgDecode["image"]["url"]}\" target=\"_blank\"";
-									elseif(isset($msgDecode["audio"])):
-										$downloadLink = "href=\"{$msgDecode["audio"]["url"]}\" target=\"_blank\"";
-									elseif(isset($msgDecode["video"])):
-										$downloadLink = "href=\"{$msgDecode["video"]["url"]}\" target=\"_blank\"";
-									elseif(isset($msgDecode["document"])):
-										$downloadLink = "href=\"{$msgDecode["document"]["url"]}\" target=\"_blank\"";
-									else:
-										$downloadBtn = " disabled";
-									endif;
-								} catch(Exception $e){
-									$downloadBtn = " disabled";
-								}
-
-								return <<<HTML
-								<div class="table-buttons">
-									<div class="btn-group">
-										<a {$downloadLink}><button class="btn btn-sm btn-primary lift" title="{$GLOBALS["__"]("tables_wabtn_downloadattach")}" {$downloadBtn}>
-											<i class="la la-download"></i>
-										</button></a>
-										<button class="btn btn-sm btn-danger lift" title="{$GLOBALS["__"]("table_title_deletethisitem")}" system-delete="wa.sent/{$row["id"]}">
-											<i class="la la-trash"></i>
-										</button>
-									</div>
-								</div>
-								HTML;
-							}
-						]
-					], 
-					[
-						"id",
-					],
-					[
-						"uid = " . logged_id . " AND status > 2"
-					]);
-				endif;
-
-				break;
-			case "whatsapp.received":
-				if(isset($request["structure"])):
-					$structure = [
-						"limit" => 10,
-						"history" => [
-							"column" => "receive_date"
-						],
-						"export" => [
-							"export_columns" => [0, 1, 2, 3],
-							"copy_title" => ___(__("table_whatsappreceive_exportcopy"), [date("d-m-Y (g:s A)")]),
-							"excel_filename" => ___(__("table_whatsappreceive_exportexcel"), [date("d-m-Y (g:s A)")]),
-							"pdf_filename" => ___(__("table_whatsappreceive_exportpdf"), [date("d-m-Y (g:s A)")])
-						],
-						"columns" => [
-							[
-								"title" => __("dashboard_messages_tablereceivedreceived"),
-								"data" => "receive_date"
-							],
-							[
-								"title" => __("dashboard_messages_tablereceivedsender"),
-								"data" => "phone"
-							],
-							[
-								"title" => __("dashboard_messages_tablereceivedmessage"),
-								"data" => "message",
-								"sortable" => false
-							],
-							[
-								"title" => __("table_whatsappreceived_accounttitle"),
-								"data" => "account",
-								"searchable" => false,
-								"sortable" => false
-							],
-							[
-								"title" => __("dashboard_messages_tablereceivedoptions"),
-								"data" => "options",
-								"sortable" => false
-							]
-						]
-					];
-				else:
-					$datatable = $this->datatable->complex($request, "wa_received", [
-						[
-							"db" => "receive_date",
-							"dt" => "receive_date",
-							"formatter" => function($value){
-								$createDate = date(logged_date_format, strtotime($value));
-								$createTime = date(logged_clock_format, strtotime($value));
-								return <<<HTML
-								{$createDate}<br>
-								({$createTime})
-								HTML;
-							}
-						],
-						[
-							"db" => "id",
-							"dt" => "id",
-							"formatter" => function($value, $row){
-								return "#{$value}";
-							}
-						],
-						[
-							"db" => "phone",
-							"dt" => "phone",
-							"formatter" => function($value, $row){
-								if(find("@g.us", $value)):
-									$groupName = empty($row["group"]) ? __("table_unknown_data") : $row["group"];
-									$groupAddress = ltrim($value, "+");
-									return <<<HTML
-									{$groupName}<br>
-									{$groupAddress}
-									HTML;
-								else:
-									$this->cache->container("contacts." . logged_hash);
-
-									if($this->cache->empty()):
-										$this->cache->setArray($this->table->getContacts(logged_id));
-									endif;
-
-									$contacts = $this->cache->getAll();
-
-									$contactName = isset($contacts[$value]) ? $contacts[$value]["name"] : __("table_unknown_data");
-
-									return <<<HTML
-									{$contactName}<br>
-									{$value}
-									HTML;
-								endif;
-							}
-						],
-						[
-							"db" => "message",
-							"dt" => "message",
-							"formatter" => function($value, $row){
-								if(mb_strlen($value) < 1):
-									$messageStr = __("table_wareceived_attachmentnomsg");
-									$exportData = $this->sanitize->string(__("table_wareceived_attachmentnomsg"), true);
-								else:
-									$messageStr = mb_strlen($value) > 10 ? mb_substr($value, 0, 10) . "...<br><button class=\"btn btn-sm btn-primary lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.received-{$row["id"]}\"><i class=\"la la-search\"></i></button>" : $value;
-									$exportData = $this->sanitize->string($value, true);
-								endif;
-
-								return <<<HTML
-								<p export-data="{$exportData}">{$messageStr}</p>
-								HTML;
-							}
-						],
-						[
-							"db" => "wid",
-							"dt" => "account",
-							"formatter" => function($value){
-								$account = explode(":", $value);
-
-								return "+{$account[0]}";
-							}
-						],
-						[
-							"dt" => "options",
-							"formatter" => function($row){
-								$downloadBtn = false;
-								$downloadLink = "href=\"javascript:void(0)\"";
-
-								try {
-									$fileName = checkFile($row["id"], "uploads/whatsapp/received/{$row["unique"]}");
-
-									if($fileName):
-										$downloadLink = "href=\"" . site_url("uploads/whatsapp/received/{$row["unique"]}/{$fileName}", true) . "\" target=\"_blank\"";
-									else:
-										$downloadBtn = " disabled";
-									endif;
-								} catch(Exception $e){
-									$downloadBtn = " disabled";
-								}
-
-								return <<<HTML
-								<div class="table-buttons">
-									<div class="btn-group">
-										<a {$downloadLink}><button class="btn btn-sm btn-primary lift" title="{$GLOBALS["__"]("tables_wabtn_downloadattach")}" {$downloadBtn}>
-											<i class="la la-download"></i>
-										</button></a>
-										<button class="btn btn-sm btn-success lift" title="{$GLOBALS["__"]("table_whatsappreceive_replytitle")}" system-toggle="whatsapp.quick" system-reply="{$row["phone"]}">
-											<i class="la la-reply"></i>
-										</button>
-										<button class="btn btn-sm btn-danger lift" title="{$GLOBALS["__"]("table_title_deletethisitem")}" system-delete="wa.received/{$row["id"]}">
-											<i class="la la-trash"></i>
-										</button>
-									</div>
-								</div>
-								HTML;
-							}
-						]
-					], 
-					[
-						"unique",
-						"group"
-					],
-					[
-						"uid = " . logged_id
 					]);
 				endif;
 
@@ -1909,6 +1735,171 @@ class Table_Controller extends MVC_Controller
 						"uid",
 						"wid",
 						"processed"
+					],
+					[
+						"uid = " . logged_id
+					]);
+				endif;
+
+				break;
+			case "whatsapp.received":
+				if(isset($request["structure"])):
+					$structure = [
+						"limit" => 10,
+						"history" => [
+							"column" => "receive_date"
+						],
+						"export" => [
+							"export_columns" => [0, 1, 2, 3],
+							"copy_title" => ___(__("table_whatsappreceive_exportcopy"), [date("d-m-Y (g:s A)")]),
+							"excel_filename" => ___(__("table_whatsappreceive_exportexcel"), [date("d-m-Y (g:s A)")]),
+							"pdf_filename" => ___(__("table_whatsappreceive_exportpdf"), [date("d-m-Y (g:s A)")])
+						],
+						"columns" => [
+							[
+								"title" => __("dashboard_messages_tablereceivedreceived"),
+								"data" => "receive_date",
+								"width" => "20%"
+							],
+							[
+								"title" => __("dashboard_messages_tablereceivedsender"),
+								"data" => "phone"
+							],
+							[
+								"title" => __("dashboard_messages_tablereceivedmessage"),
+								"data" => "message",
+								"width" => "20%",
+								"sortable" => false
+							],
+							[
+								"title" => __("table_whatsappreceived_accounttitle"),
+								"data" => "account",
+								"searchable" => false,
+								"sortable" => false
+							],
+							[
+								"title" => __("dashboard_messages_tablereceivedoptions"),
+								"data" => "options",
+								"sortable" => false
+							]
+						]
+					];
+				else:
+					$datatable = $this->datatable->complex($request, "wa_received", [
+						[
+							"db" => "receive_date",
+							"dt" => "receive_date",
+							"formatter" => function($value){
+								$createDate = date(logged_date_format, strtotime($value));
+								$createTime = date(logged_clock_format, strtotime($value));
+								return <<<HTML
+								{$createDate}<br>
+								({$createTime})
+								HTML;
+							}
+						],
+						[
+							"db" => "id",
+							"dt" => "id",
+							"formatter" => function($value, $row){
+								return "#{$value}";
+							}
+						],
+						[
+							"db" => "phone",
+							"dt" => "phone",
+							"formatter" => function($value, $row){
+								if(find("@g.us", $value)):
+									$groupName = empty($row["group"]) ? __("table_unknown_data") : $row["group"];
+									$groupAddress = ltrim($value, "+");
+									return <<<HTML
+									{$groupName}<br>
+									{$groupAddress}
+									HTML;
+								else:
+									$this->cache->container("contacts." . logged_hash);
+
+									if($this->cache->empty()):
+										$this->cache->setArray($this->table->getContacts(logged_id));
+									endif;
+
+									$contacts = $this->cache->getAll();
+
+									$contactName = isset($contacts[$value]) ? $contacts[$value]["name"] : __("table_unknown_data");
+									$contactPhone = $value;
+
+									return <<<HTML
+									{$contactName}<br>
+									{$contactPhone}
+									HTML;
+								endif;
+							}
+						],
+						[
+							"db" => "message",
+							"dt" => "message",
+							"formatter" => function($value, $row){
+								if(mb_strlen($value) < 1):
+									$messageStr = __("table_wareceived_attachmentnomsg");
+									$exportData = $this->sanitize->string(__("table_wareceived_attachmentnomsg"), true);
+								else:
+									$messageStr = mb_strlen($value) > 50 ? mb_substr($value, 0, 20) . "...<br><button class=\"btn btn-sm btn-primary lift\" title=\"" . __("dashboard_messages_tablefullmessage") . "\" system-toggle=\"view/wa.received-{$row["id"]}\">" . __("dashboard_messages_tablefullmessage") . "</button>" : $value;
+									$exportData = $this->sanitize->string($value, true);
+								endif;
+
+								return <<<HTML
+								<p export-data="{$exportData}">{$messageStr}</p>
+								HTML;
+							}
+						],
+						[
+							"db" => "wid",
+							"dt" => "account",
+							"formatter" => function($value){
+								$account = explode(":", $value);
+
+								return "+{$account[0]}";
+							}
+						],
+						[
+							"dt" => "options",
+							"formatter" => function($row){
+								$downloadBtn = false;
+								$downloadLink = "href=\"javascript:void(0)\"";
+
+								try {
+									$fileName = checkFile($row["id"], "uploads/whatsapp/received/{$row["unique"]}");
+
+									if($fileName):
+										$downloadLink = "href=\"" . site_url("uploads/whatsapp/received/{$row["unique"]}/{$fileName}", true) . "\" target=\"_blank\"";
+									else:
+										$downloadBtn = " disabled";
+									endif;
+								} catch(Exception $e){
+									$downloadBtn = " disabled";
+								}
+
+								return <<<HTML
+								<div class="table-buttons">
+								    <div class="btn-group">
+										<a {$downloadLink}><button class="btn btn-sm btn-primary lift" title="{$GLOBALS["__"]("tables_wabtn_downloadattach")}" {$downloadBtn}>
+								            <i class="la la-download"></i>
+								        </button></a>
+								    	<button class="btn btn-sm btn-success lift" title="{$GLOBALS["__"]("table_whatsappreceive_replytitle")}" system-toggle="whatsapp.quick" system-reply="{$row["phone"]}">
+								            <i class="la la-reply"></i>
+								        </button>
+								        <button class="btn btn-sm btn-danger lift" title="{$GLOBALS["__"]("table_title_deletethisitem")}" system-delete="wa.received/{$row["id"]}">
+								            <i class="la la-trash"></i>
+								        </button>
+								    </div>
+								</div>
+								HTML;
+							}
+						]
+					], 
+					[
+						"unique",
+						"group"
 					],
 					[
 						"uid = " . logged_id
@@ -2436,12 +2427,6 @@ class Table_Controller extends MVC_Controller
 									case 14:
 										$android = __("table_androidver_14");
 										break;
-									case 15:
-										$android = __("table_androidver_15");
-										break;
-									case 16:
-										$android = __("table_androidver_16");
-										break;
 									default:
 										$android = __("table_unknown_data");
 								endswitch;
@@ -2603,12 +2588,6 @@ class Table_Controller extends MVC_Controller
 									case 14:
 										$android = __("table_androidver_14");
 										break;
-									case 15:
-										$android = __("table_androidver_15");
-										break;
-									case 16:
-										$android = __("table_androidver_16");
-										break;
 									default:
 										$android = __("table_unknown_data");
 								endswitch;
@@ -2679,6 +2658,10 @@ class Table_Controller extends MVC_Controller
 								"data" => "global"
 							],
 							[
+								"title" => __("table_android_statustitle"),
+								"data" => "status"
+							],
+							[
 								"title" => __("dashboard_devices_tableregisteredoptions"),
 								"data" => "options",
 								"searchable" => false,
@@ -2746,12 +2729,6 @@ class Table_Controller extends MVC_Controller
 									case 14:
 										$android = __("table_androidver_14");
 										break;
-									case 15:
-										$android = __("table_androidver_15");
-										break;
-									case 16:
-										$android = __("table_androidver_16");
-										break;
 									default:
 										$android = __("table_unknown_data");
 								endswitch;
@@ -2764,6 +2741,19 @@ class Table_Controller extends MVC_Controller
 							"dt" => "global",
 							"formatter" => function($value){
 								return $value < 2 ? __("table_enabled_data") : __("table_disabled_data"); 
+							}
+						],
+						[
+							"db" => "online_id",
+							"dt" => "status",
+							"formatter" => function($value){
+								try {
+				                    $echoToken = $this->echo->token($this->guzzle, $this->cache);
+				                } catch(Exception $e){
+				                    return "<i class=\"la la-signal text-danger\"></i> {$GLOBALS["__"]("table_android_statusoffline")}";
+				                }
+
+								return $echoToken ? ($this->echo->status($value, $this->guzzle, $this->cache) ? "<i class=\"la la-signal text-success\"></i> {$GLOBALS["__"]("table_android_statusonline")}" : "<i class=\"la la-signal text-danger\"></i> {$GLOBALS["__"]("table_android_statusoffline")}") : "<i class=\"la la-signal text-danger\"></i> {$GLOBALS["__"]("table_android_statusoffline")}"; 
 							}
 						],
 						[

@@ -10,7 +10,7 @@
                             {__("template_sidebar_ai")}
                         </h6>
                         <h1 class="header-title">
-                            <i class="la la-key la-lg"></i> {__("ai_menu_title_aikeys")}
+                            <i class="la la-key la-lg"></i> {__("template_sidebar_ai_keys")}
                         </h1>
                     </div>
                     <div class="col-auto">

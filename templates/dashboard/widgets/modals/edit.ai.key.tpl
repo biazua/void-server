@@ -27,7 +27,6 @@
                         <option value="openai" {if $data.key.provider eq "openai"}selected{/if}>OpenAI ({__("form_addaikey_providerrecommended")})</option>
                         <option value="geminiai" {if $data.key.provider eq "geminiai"}selected{/if}>GeminiAI</option>
                         <option value="claudeai" {if $data.key.provider eq "claudeai"}selected{/if}>ClaudeAI</option>
-                        <option value="deepseekai" {if $data.key.provider eq "deepseekai"}selected{/if}>DeepSeekAI</option>
                     </select>
                 </div>
 
@@ -45,7 +44,17 @@
                     <textarea name="post_prompt" rows="5" class="form-control" placeholder="{__("form_addaikey_postprompt_placeholder")}">{$data.key.post_prompt}</textarea>
                 </div>
 
-                <div class="form-group col-12" system-vision-ai>
+                <div class="form-group col-12">
+                    <label>
+                        {__("form_addaikey_groupreply")} <i class="la la-info-circle" title="{__("form_addaikey_groupreply_desc")}"></i>
+                    </label>
+                    <select name="group_reply" class="form-control">
+                        <option value="1" {if $data.key.group_reply < 2}selected{/if}>{__("form_enable")}</option>
+                        <option value="2" {if $data.key.group_reply > 1}selected{/if}>{__("form_disable")}</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-12">
                     <label>
                         {__("form_addaikey_vision_title")} <i class="la la-info-circle" title="{__("form_addaikey_vision_desc")}"></i>
                     </label>
@@ -94,15 +103,6 @@
                     <select name="model_claudeai" class="form-control">
                         <option value="claude-3-5-sonnet-latest" data-content="claude-3-5-sonnet-latest <span class='badge badge-success'>{__("form_addaikey_modelsmartest")}</span>" {if $data.key.model eq "claude-3-5-sonnet-latest"}selected{/if}>claude-3-5-sonnet-latest ({__("form_addaikey_modelsmartest")})</option>
                         <option value="claude-3-5-haiku-latest" data-content="claude-3-5-haiku-latest <span class='badge badge-warning'>{__("form_addaikey_modelcheapest")}</span> <span class='badge badge-danger'>{__("form_aikey_provider_visionoff")}</span>" {if $data.key.model eq "claude-3-5-haiku-latest"}selected{/if}>claude-3-5-haiku-latest ({__("form_addaikey_modelcheapest")}) ({__("form_aikey_provider_visionoff")})</option>
-                    </select>
-                </div>
-
-                <div class="form-group col-12" system-models-deepseekai>
-                    <label>
-                        {__("form_addaikey_model_title")} <i class="la la-info-circle" title="{__("form_addaikey_model_desc")}"></i>
-                    </label>
-                    <select name="model_deepseekai" class="form-control">
-                        <option value="deepseek-chat" data-content="deepseek-chat <span class='badge badge-danger'>{__("form_addaikey_visonunsupported")}</span>" {if $data.key.model eq "deepseek-chat"}selected{/if}>deepseek-chat ({__("form_addaikey_visonunsupported")})</option>
                     </select>
                 </div>
 

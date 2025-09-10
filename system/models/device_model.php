@@ -112,17 +112,10 @@ class Device_Model extends MVC_Model
         ]);
     }
 
-    public function getUssd($id)
-    {
-        return $this->db->query_one("SELECT id, uid, did, code, sim, status, create_date FROM ussd WHERE id = ?", [
-            $id
-        ]);
-    }
-
     public function getPendingMessages($did, $diff)
     {
         $query = <<<SQL
-SELECT s.id AS id, s.uid AS uid, IF(c.id, c.id, 0) AS cid, s.sim AS sim, s.phone AS recipient, s.message AS message, s.priority AS priority
+SELECT s.id AS id, IF(c.id, c.id, 0) AS cid, IF(c.status, c.status, 1) AS cstatus, s.uid AS uid, s.sim AS sim, s.phone AS phone, s.message AS message, s.priority AS priority
 FROM sent s
 LEFT JOIN campaigns c ON s.cid = c.id
 WHERE s.did = ? AND s.status < 2
@@ -136,6 +129,22 @@ SQL;
         if ($this->db->num_rows() > 0):
             while ($row = $this->db->next())
                 $rows[] = $row;
+
+            return $rows;
+        else:
+            return [];
+        endif;
+    }
+
+    public function getCleanerSms($ids, $did)
+    {
+        $this->db->query("SELECT id FROM sent WHERE id in ({$ids}) AND did = ? AND status < 3", [
+            $did
+        ]);
+
+        if ($this->db->num_rows() > 0):
+            while ($row = $this->db->next())
+                $rows[] = $row["id"];
 
             return $rows;
         else:
@@ -213,7 +222,7 @@ SQL;
     public function getActions($uid, $type)
     {
         $query = <<<SQL
-SELECT a.id, a.type, a.source, a.`event`, a.priority, a.`match`, a.sim, a.ai_key, k.id AS ai_key_id, k.prompt AS ai_prompt, k.provider AS `provider`, k.post_prompt AS ai_post_prompt, k.model AS ai_model, k.history AS ai_history, k.max_tokens AS ai_max_tokens, k.vision AS ai_vision, k.transcription AS ai_transcription, k.apikey AS ai_apikey, a.ai_plugins, a.device, a.keywords, a.link, a.message
+SELECT a.id, a.type, a.source, a.`event`, a.priority, a.`match`, a.sim, a.ai_key, k.id AS ai_key_id, k.prompt AS ai_prompt, k.provider AS `provider`, k.post_prompt AS ai_post_prompt, k.model AS ai_model, k.history AS ai_history, k.group_reply AS ai_group_reply, k.max_tokens AS ai_max_tokens, k.vision AS ai_vision, k.transcription AS ai_transcription, k.apikey AS ai_apikey, a.ai_plugins, a.device, a.keywords, a.link, a.message
 FROM actions a
 LEFT JOIN ai_keys k ON a.ai_key = k.id
 WHERE a.uid = ? AND a.type = ? AND a.source < 2

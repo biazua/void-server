@@ -80,14 +80,6 @@
                             <option value="1" {if $data.autoreply.priority < 2}selected{/if}>{__("form_yes")}</option>
                             <option value="2" {if $data.autoreply.priority > 1}selected{/if}>{__("form_no")}</option>
                         </select>
-
-                        <label class="mt-3">
-                            {__("form_addautoreply_grouptrigger")} <i class="la la-info-circle" title="{__("form_addautoreply_grouptrigger_desc")}"></i>
-                        </label>
-                        <select name="group_trigger" class="form-control">
-                            <option value="1" {if $data.autoreply.group_trigger < 2}selected{/if}>{__("form_enable")}</option>
-                            <option value="2" {if $data.autoreply.group_trigger > 1}selected{/if}>{__("form_disable")}</option>
-                        </select>
                         
                         <div system-ai-hide>
                             <label class="mt-3">
