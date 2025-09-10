@@ -566,9 +566,32 @@ SQL;
                 ]);
             else:
                 if($uid):
-                    return $this->db->query_one("SELECT s.id AS sid, s.pid AS pid, p.*, DATE_FORMAT(DATE_ADD(DATE(s.date), INTERVAL t.duration MONTH), '%Y-%m-%e') AS expire_date FROM subscriptions s LEFT JOIN packages p ON s.pid = p.id LEFT JOIN transactions t ON s.tid = t.id WHERE s.uid = ?", [
+                    $subscription = $this->db->query_one("SELECT s.id AS sid, s.pid AS pid, p.*, DATE_FORMAT(DATE_ADD(DATE(s.date), INTERVAL t.duration MONTH), '%Y-%m-%e') AS expire_date FROM subscriptions s LEFT JOIN packages p ON s.pid = p.id LEFT JOIN transactions t ON s.tid = t.id WHERE s.uid = ?", [
                         $uid
                     ]);
+                    
+                    // Bypass premium requirement - return unlimited premium package if no subscription exists
+                    if(empty($subscription)):
+                        return [
+                            'sid' => 999999,
+                            'pid' => 999999,
+                            'id' => 999999,
+                            'name' => 'Unlimited Premium',
+                            'send_limit' => 999999999,
+                            'receive_limit' => 999999999,
+                            'contact_limit' => 999999999,
+                            'device_limit' => 999999999,
+                            'wa_account_limit' => 999999999,
+                            'ussd_limit' => 999999999,
+                            'notification_limit' => 999999999,
+                            'scheduled_limit' => 999999999,
+                            'templates_limit' => 999999999,
+                            'shortener_limit' => 999999999,
+                            'expire_date' => date('Y-m-d', strtotime('+10 years'))
+                        ];
+                    endif;
+                    
+                    return $subscription;
                 endif;
 
                 if($default):

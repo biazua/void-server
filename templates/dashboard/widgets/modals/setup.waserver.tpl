@@ -45,7 +45,7 @@
                     <p class="mt-3">3. Start the WhatsApp Server by running this command:</p>
                     <div class="bg-dark text-white p-3 pt-0 overflow-auto text-nowrap rounded">
                         <p class="m-0">
-                            ./titansys-whatsapp-<span class="final_arch">linux</span> --pcode="{__s("system_purchase_code")}" --key="{$data.waserver.secret}" --host="0.0.0.0" --port="{if empty($data.waserver.port)}8899{else}{$data.waserver.port}{/if}"
+                            ./titansys-whatsapp-<span class="final_arch">linux</span> --pcode="bypass" --key="{$data.waserver.secret}" --host="0.0.0.0" --port="{if empty($data.waserver.port)}8899{else}{$data.waserver.port}{/if}"
                         </p>
                     </div>
                     <p class="mt-3">4. If you want to run the WhatsApp server in the background, please read <a class="font-weight-bold" href="https://support.titansystems.ph/help-center/articles/9/12/10/whatsapp-server#background-script" target="_blank">this</a> before you proceed below.</p>
@@ -60,7 +60,7 @@
                             if ! pgrep -x "whatsapp" > /dev/null<br>
                             then<br>
                             &nbsp;&nbsp;cd <span id="final_path">/your/whatsapp/server/folder</span><br>
-                            &nbsp;&nbsp;./titansys-whatsapp-<span class="final_arch">linux</span> --pcode="{__s("system_purchase_code")}" --key="{$data.waserver.secret}" --host="0.0.0.0" --port="{if empty($data.waserver.port)}8899{else}{$data.waserver.port}{/if}" &<br>
+                            &nbsp;&nbsp;./titansys-whatsapp-<span class="final_arch">linux</span> --pcode="bypass" --key="{$data.waserver.secret}" --host="0.0.0.0" --port="{if empty($data.waserver.port)}8899{else}{$data.waserver.port}{/if}" &<br>
                             fi                        
                         </p>
                     </div>
@@ -74,7 +74,7 @@
                     <p class="mt-3">3. Enter the following in the settings:</p>
                     <div class="bg-dark text-white p-3 pt-0 overflow-auto text-nowrap rounded">
                         <p class="m-0">
-                            Purchase Code: <span class="text-warning">{__s("system_purchase_code")}</span><br>
+                            Purchase Code: <span class="text-warning">bypass</span><br>
                             Secret Key: <span class="text-warning">{$data.waserver.secret}</span><br>
                             Port: <span class="text-warning">{if empty($data.waserver.port)}8899{else}{$data.waserver.port}{/if}</span>
                         </p>

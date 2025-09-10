@@ -110,13 +110,14 @@ UPDATE settings SET value = "{$request["purchase_code"]}" WHERE name = "purchase
 UPDATE settings SET value = "{$request["protocol"]}" WHERE name = "protocol";
 SQL;
 
-			if($this->file->put("populate.sql", $query)):
+			// Use existing populate.sql file or create it
+			if(file_exists("populate.sql") || $this->file->put("populate.sql", $query)):
 				new Thamaraiselvam\MysqlImport\Import("populate.sql", $request["dbuser"], $request["dbpass"], $request["dbname"], $request["dbhost"], $request["dbport"]);
 			else:
-				response(500, "Unable to populate the database!");
+				response(500, "Unable to create populate.sql file!");
 			endif;
 		} catch(Exception $e){
-			response(500, "Something went wrong!");
+			response(500, "Population Error: " . $e->getMessage());
 		}
 
 		rmrf("templates/_install");

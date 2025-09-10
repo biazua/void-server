@@ -784,20 +784,21 @@ class Cron_Controller extends MVC_Controller
 						endif;
 
 						if(time() >= $subscription["expire"]):
-							if($this->cache->has($subscription["id"]))
-								$this->cache->delete($subscription["id"]);
+							// Bypass subscription expiration - do not delete subscriptions
+							// if($this->cache->has($subscription["id"]))
+							//	$this->cache->delete($subscription["id"]);
 
-							$this->system->delete(false, $subscription["id"], "subscriptions");
+							// $this->system->delete(false, $subscription["id"], "subscriptions");
 
-							$this->mail->send([
-								"title" => system_site_name,
-								"data" => [
-									"subject" => mail_title(__("cron_package_expired"))
-								],
-								"lang" => $langStrings
-							], $subscription["email"], "_mail/expired.tpl", $this->smarty);
+							// $this->mail->send([
+							//	"title" => system_site_name,
+							//	"data" => [
+							//		"subject" => mail_title(__("cron_package_expired"))
+							//	],
+							//	"lang" => $langStrings
+							// ], $subscription["email"], "_mail/expired.tpl", $this->smarty);
 
-							usleep(500000);
+							// usleep(500000);
 						endif;
 					endforeach;
 				endif;
